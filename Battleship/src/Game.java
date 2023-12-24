@@ -25,7 +25,7 @@ public class Game implements KeyListener {
     public Game() {
         // Choose Level Difficulty
         String[] options = new String[] {"Easy", "Medium", "Hard"};
-        Font font = new Font("Garamond", Font.BOLD, 30);
+        Font font = new Font("Garamond", Font.BOLD, 20);
         UIManager.put("OptionPane.messageFont", font);
         String message = "The Easy mode will have the AI making random moves.\nIn Medium level, the AI will concentrate on areas where it detects ships."
                 + "\nIn Hard level, the AI will make more intelligent decisions compared to Medium.";
