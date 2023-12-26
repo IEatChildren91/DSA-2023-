@@ -4,6 +4,10 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.Clip;
+import javax.sound.sampled.AudioInputStream;
+import java.io.File;
 
 /**
  * Battleship
@@ -71,25 +75,60 @@ public class GamePanel extends JPanel implements MouseListener, MouseMotionListe
      * A state that can be toggled with D to show the computer's ships.
      */
     public static boolean debugModeActive;
+    public boolean hasExtraTurn;
 
     /**
      * Initialises everything necessary to begin playing the game. The grids for each player are initialised and
      * then used to determine how much space is required. The listeners are attached, AI configured, and
      * everything set to begin the game with placing a ship for the player.
      */
+    public static void playSound(String soundFileName) {
+        try {
+            File soundFile = new File(soundFileName);
+            AudioInputStream audioIn = AudioSystem.getAudioInputStream(soundFile);
+            Clip clip = AudioSystem.getClip();
+            clip.open(audioIn);
+            clip.start();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
     public GamePanel(int aiChoice) {
-        computer = new SelectionGrid(0,0);
-        player = new SelectionGrid(0,computer.getHeight()+50);
-        setBackground(new Color(175, 238, 238));
-        setPreferredSize(new Dimension(computer.getWidth(), player.getPosition().y + player.getHeight()));
+        int gap = 60; // Gap between the two grids
+
+        // Initialize the grids
+        computer = new SelectionGrid(0, 0);
+        player = new SelectionGrid(computer.getWidth() + gap, 0);
+
+        // Set layout and background color
+        setLayout(new BorderLayout());
+        setBackground(Color.BLACK);
+
+        // Set the preferred size of the panel to accommodate both grids horizontally
+        int totalWidth = computer.getWidth() + player.getWidth() + gap;
+        int maxHeight = Math.max(computer.getHeight(), player.getHeight());
+        setPreferredSize(new Dimension(totalWidth, maxHeight + 100));
+
+        // Add mouse listeners
         addMouseListener(this);
         addMouseMotionListener(this);
-        if(aiChoice == 0) aiController = new SimpleRandomAI(player);
-        else aiController = new SmarterAI(player,aiChoice == 2,aiChoice == 2);
-        statusPanel = new StatusPanel(new Position(0,computer.getHeight()+1),computer.getWidth(),49);
-        restart();
 
+        // Initialize AI controller
+        if (aiChoice == 0) {
+            aiController = new SimpleRandomAI(player);
+        } else {
+            aiController = new SmarterAI(player, aiChoice == 2, aiChoice == 2);
+        }
+
+        // Initialize and position the status panel
+        statusPanel = new StatusPanel(new Position(0, maxHeight), totalWidth, 49);
+        //add(statusPanel, BorderLayout.SOUTH); // Example: placing it at the bottom
+        hasExtraTurn = false;
+        // Start a new game
+        restart();
     }
+
     /**
      * Draws the grids for both players, any ship being placed, and the status panel.
      *
@@ -97,6 +136,7 @@ public class GamePanel extends JPanel implements MouseListener, MouseMotionListe
      */
     public void paint(Graphics g) {
         super.paint(g);
+
         computer.paint(g);
         player.paint(g);
         if(gameState == GameState.PlacingShips) {
@@ -146,6 +186,7 @@ public class GamePanel extends JPanel implements MouseListener, MouseMotionListe
         debugModeActive = false;
         statusPanel.reset();
         gameState = GameState.PlacingShips;
+        hasExtraTurn = false;
     }
 
     /**
@@ -183,8 +224,8 @@ public class GamePanel extends JPanel implements MouseListener, MouseMotionListe
             updateShipPlacement(tempPlacingPosition);
         } else {
             gameState = GameState.FiringShots;
-            statusPanel.setTopLine("Attack the Enemy!");
-            statusPanel.setBottomLine("Destroy all Ships to win!");
+            statusPanel.setTopLine("ATTACK THE ENEMY!");
+            statusPanel.setBottomLine("DESTROY ALL SHIPS TO WIN!");
         }
     }
 
@@ -197,15 +238,20 @@ public class GamePanel extends JPanel implements MouseListener, MouseMotionListe
      * @param mousePosition Mouse coordinates inside the panel.
      */
     private void tryFireAtComputer(Position mousePosition) {
+        playSound("shoot.wav");
         Position targetPosition = computer.getPositionInGrid(mousePosition.x,mousePosition.y);
         // Ignore if position was already clicked
         if(!computer.isPositionMarked(targetPosition)) {
             doPlayerTurn(targetPosition);
             // Only do the AI turn if the game didn't end from the player's turn.
-            if(!computer.areAllShipsDestroyed()) {
+            if(!computer.areAllShipsDestroyed() && !hasExtraTurn) {
                 doAITurn();
             }
+            hasExtraTurn = false;
         }
+    }
+    public void extraTurn() {
+        hasExtraTurn = true;
     }
 
     /**
@@ -217,18 +263,31 @@ public class GamePanel extends JPanel implements MouseListener, MouseMotionListe
      */
     private void doPlayerTurn(Position targetPosition) {
         boolean hit = computer.markPosition(targetPosition);
-        String hitMiss = hit ? "Hit" : "Missed";
-        String destroyed = "";
-        if(hit && computer.getMarkerAtPosition(targetPosition).getAssociatedShip().isDestroyed()) {
-            destroyed = "(Sunk)";
+        boolean hitTreasure = computer.isTreasureAtPosition(targetPosition);
+        String statusMessage = "";
+
+        if(hitTreasure) {
+            statusMessage = "TREASURE FOUND! YOU HAVE 1 MORE MOVE!!";
+            extraTurn();
+            //doPlayerTurn(targetPosition);
+            playSound("treasure.wav"); // Optionally play a sound
         }
-        statusPanel.setTopLine("You " + hitMiss + " " + targetPosition +" "+ destroyed);
+        String hitMiss = hit ? "HIT!" : "MISSED!";
+        String destroyed = "";
+
+        Marker marker = computer.getMarkerAtPosition(targetPosition);
+        if(hit && marker.getAssociatedShip() != null && marker.getAssociatedShip().isDestroyed()) {
+            destroyed = "ENEMY'S SHIP HAS SUNK!";
+        }
+        statusPanel.setTopLine(statusMessage + " YOU " + hitMiss + " " + destroyed);
+
         if(computer.areAllShipsDestroyed()) {
-            // Player wins!
+            playSound("win.wav");
             gameState = GameState.GameOver;
             statusPanel.showGameOver(true);
         }
     }
+
 
     /**
      * Processes the AI turn by using the AI Controller to select a move.
@@ -238,19 +297,19 @@ public class GamePanel extends JPanel implements MouseListener, MouseMotionListe
     private void doAITurn() {
         Position aiMove = aiController.selectMove();
         boolean hit = player.markPosition(aiMove);
-        String hitMiss = hit ? "Hit" : "Missed";
+        String hitMiss = hit ? "HIT!" : "MISSED!";
         String destroyed = "";
         if(hit && player.getMarkerAtPosition(aiMove).getAssociatedShip().isDestroyed()) {
-            destroyed = "(Sunk)";
+            destroyed = "YOUR SHIP HAS SUNK!";
         }
-        statusPanel.setBottomLine("Enemy " + hitMiss + " " + aiMove + " " + destroyed);
+        statusPanel.setBottomLine("ENEMY " + hitMiss + " " + destroyed);
         if(player.areAllShipsDestroyed()) {
             // Computer wins!
+            playSound("lose.wav");
             gameState = GameState.GameOver;
             statusPanel.showGameOver(false);
         }
     }
-
     /**
      * Updates the ship being placed location if the mouse is inside the grid.
      *
