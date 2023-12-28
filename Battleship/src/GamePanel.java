@@ -4,6 +4,13 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.Clip;
+import javax.sound.sampled.AudioInputStream;
+import java.io.File;
+import java.awt.image.BufferedImage;
+import java.io.IOException;
+import javax.imageio.ImageIO;
 
 /**
  * Battleship
@@ -32,7 +39,8 @@ public class GamePanel extends JPanel implements MouseListener, MouseMotionListe
      * The "GameOver" state ends when the player chooses to either exit the game or start a new one.
      */
     public enum GameState { PlacingShips, FiringShots, GameOver }
-
+    private int compCount;
+    private int playerCount;
     /**
      * Reference to the status panel to pass text messages to show what is happening.
      */
@@ -71,25 +79,102 @@ public class GamePanel extends JPanel implements MouseListener, MouseMotionListe
      * A state that can be toggled with D to show the computer's ships.
      */
     public static boolean debugModeActive;
+    public boolean hasExtraTurn;
+    public boolean aiHasExtraTurn;
+    private BufferedImage radarBG;
 
     /**
      * Initialises everything necessary to begin playing the game. The grids for each player are initialised and
      * then used to determine how much space is required. The listeners are attached, AI configured, and
      * everything set to begin the game with placing a ship for the player.
      */
+    /*private void drawSonarScreen(Graphics g, int gridX, int gridY, int gridWidth, int gridHeight) {
+        Graphics2D g2d = (Graphics2D) g; // Cast to Graphics2D for more control
+
+        int centerX = gridX + gridWidth / 2;
+        int centerY = gridY + gridHeight / 2;
+        int radius = 50*4 ;
+
+        // Set the transparency
+        float alpha = 0.75f; // Adjust this value for desired transparency (0.0 to 1.0)
+        AlphaComposite ac = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha);
+
+        g2d.setComposite(ac);
+        float thickness = 0.55f; // Adjust this value for desired thickness
+        g2d.setStroke(new BasicStroke(thickness));
+
+        // Draw the sonar circles
+        g2d.setColor(new Color(0, 255, 0)); // Green color for sonar
+        int numCircles = 8; // Increased to 7 circles
+        for (int i = 1; i <= numCircles; i++) {
+            int circleRadius = i * radius / numCircles; // Adjusted for smaller gaps
+            g2d.drawOval(centerX - circleRadius + 25, centerY - circleRadius+25, 2 * circleRadius, 2 * circleRadius);
+        }
+
+
+        // Draw the sonar lines
+        for (int i = 45; i < 360; i += 90) {
+            double rad = Math.toRadians(i);
+            int lineX = centerX + (int) (radius * Math.cos(rad));
+            int lineY = centerY + (int) (radius * Math.sin(rad));
+            g2d.drawLine(centerX, centerY, lineX, lineY);
+        }
+
+        // Reset to default composite
+        g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1.0f));
+    }*/
+    private void drawRadarBackground(Graphics g, int gridX, int gridY, int gridWidth, int gridHeight) {
+        if (radarBG != null) {
+            int imageWidth = 50*10 + 200;
+            int imageHeight = 50*9-35;
+            int newX = gridX + (gridWidth - imageWidth) / 2 + 15; // Move it 50 pixels to the right
+            int newY = gridY + (gridHeight - imageHeight) / 2 + 25; // Center it vertically and move it up by 25 pixels
+            Graphics2D g2d = (Graphics2D) g;
+            float alpha = 0.7f; // 0.0f is fully transparent, 1.0f is fully opaque
+            AlphaComposite alphaComposite = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha);
+            g2d.setComposite(alphaComposite);
+            g2d.drawImage(radarBG, newX, newY, imageWidth, imageHeight, null);
+            g2d.setComposite(AlphaComposite.SrcOver);
+        }
+    }
+    public static void playSound(String soundFileName) {
+        try {
+            File soundFile = new File(soundFileName);
+            AudioInputStream audioIn = AudioSystem.getAudioInputStream(soundFile);
+            Clip clip = AudioSystem.getClip();
+            clip.open(audioIn);
+            clip.start();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
     public GamePanel(int aiChoice) {
-        computer = new SelectionGrid(0,0);
-        player = new SelectionGrid(0,computer.getHeight()+50);
-        setBackground(new Color(175, 238, 238));
-        setPreferredSize(new Dimension(computer.getWidth(), player.getPosition().y + player.getHeight()));
+        try {
+            radarBG = ImageIO.read(new File("radar.png")); // Load the radar image
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        int gap = 60; // Gap between the two grids
+        computer = new SelectionGrid(0, 0);
+        player = new SelectionGrid(computer.getWidth() + gap, 0);
+        setLayout(new BorderLayout());
+        setBackground(Color.BLACK);
+        int totalWidth = computer.getWidth() + player.getWidth() + gap;
+        int maxHeight = Math.max(computer.getHeight(), player.getHeight());
+        setPreferredSize(new Dimension(totalWidth, maxHeight + 150));
         addMouseListener(this);
         addMouseMotionListener(this);
-        if(aiChoice == 0) aiController = new SimpleRandomAI(player);
-        else aiController = new SmarterAI(player,aiChoice == 2,aiChoice == 2);
-        statusPanel = new StatusPanel(new Position(0,computer.getHeight()+1),computer.getWidth(),49);
+        if (aiChoice == 0) {
+            aiController = new SimpleRandomAI(player);
+        } else {
+            aiController = new SmarterAI(player, aiChoice == 2, aiChoice == 2);
+        }
+        statusPanel = new StatusPanel(new Position(0, maxHeight), totalWidth, 49);
+        hasExtraTurn = false;
+        aiHasExtraTurn = false;
         restart();
-
     }
+
     /**
      * Draws the grids for both players, any ship being placed, and the status panel.
      *
@@ -97,6 +182,8 @@ public class GamePanel extends JPanel implements MouseListener, MouseMotionListe
      */
     public void paint(Graphics g) {
         super.paint(g);
+        drawRadarBackground(g, computer.getPosition().x, computer.getPosition().y, computer.getWidth(), computer.getHeight());
+        drawRadarBackground(g, player.getPosition().x, player.getPosition().y, player.getWidth(), player.getHeight());
         computer.paint(g);
         player.paint(g);
         if(gameState == GameState.PlacingShips) {
@@ -138,14 +225,16 @@ public class GamePanel extends JPanel implements MouseListener, MouseMotionListe
         aiController.reset();
         tempPlacingPosition = new Position(0,0);
         placingShip = new Ship(new Position(0,0),
-                               new Position(player.getPosition().x,player.getPosition().y),
-                               SelectionGrid.BOAT_SIZES[0], true);
+                new Position(player.getPosition().x,player.getPosition().y),
+                SelectionGrid.BOAT_SIZES[0], true);
         placingShipIndex = 0;
         updateShipPlacement(tempPlacingPosition);
         computer.populateShips();
         debugModeActive = false;
         statusPanel.reset();
         gameState = GameState.PlacingShips;
+        hasExtraTurn = false;
+        aiHasExtraTurn = false;
     }
 
     /**
@@ -177,14 +266,14 @@ public class GamePanel extends JPanel implements MouseListener, MouseMotionListe
         // If there are still ships to place
         if(placingShipIndex < SelectionGrid.BOAT_SIZES.length) {
             placingShip = new Ship(new Position(targetPosition.x, targetPosition.y),
-                          new Position(player.getPosition().x + targetPosition.x * SelectionGrid.CELL_SIZE,
-                       player.getPosition().y + targetPosition.y * SelectionGrid.CELL_SIZE),
-                          SelectionGrid.BOAT_SIZES[placingShipIndex], true);
+                    new Position(player.getPosition().x + targetPosition.x * SelectionGrid.CELL_SIZE,
+                            player.getPosition().y + targetPosition.y * SelectionGrid.CELL_SIZE),
+                    SelectionGrid.BOAT_SIZES[placingShipIndex], true);
             updateShipPlacement(tempPlacingPosition);
         } else {
             gameState = GameState.FiringShots;
-            statusPanel.setTopLine("Attack the Enemy!");
-            statusPanel.setBottomLine("Destroy all Ships to win!");
+            statusPanel.setTopLine("ATTACK THE ENEMY!");
+            statusPanel.setBottomLine("DESTROY ALL SHIPS TO WIN!");
         }
     }
 
@@ -197,16 +286,26 @@ public class GamePanel extends JPanel implements MouseListener, MouseMotionListe
      * @param mousePosition Mouse coordinates inside the panel.
      */
     private void tryFireAtComputer(Position mousePosition) {
+
         Position targetPosition = computer.getPositionInGrid(mousePosition.x,mousePosition.y);
         // Ignore if position was already clicked
+        if (targetPosition.x < 1 || targetPosition.y < 1) {
+            return;
+        }
+        playSound("shoot.wav");
         if(!computer.isPositionMarked(targetPosition)) {
             doPlayerTurn(targetPosition);
             // Only do the AI turn if the game didn't end from the player's turn.
-            if(!computer.areAllShipsDestroyed()) {
+            if(!computer.areAllShipsDestroyed() && !hasExtraTurn) {
                 doAITurn();
             }
+            hasExtraTurn = false;
         }
     }
+    public void extraTurn() {
+        hasExtraTurn = true;
+    }
+    public void aiExtraTurn() {aiHasExtraTurn = true;}
 
     /**
      * Processes the player's turn based on where they selected to attack.
@@ -217,18 +316,34 @@ public class GamePanel extends JPanel implements MouseListener, MouseMotionListe
      */
     private void doPlayerTurn(Position targetPosition) {
         boolean hit = computer.markPosition(targetPosition);
-        String hitMiss = hit ? "Hit" : "Missed";
-        String destroyed = "";
-        if(hit && computer.getMarkerAtPosition(targetPosition).getAssociatedShip().isDestroyed()) {
-            destroyed = "(Sunk)";
+        boolean hitTreasure = computer.isTreasureAtPosition(targetPosition);
+        String statusMessage = "";
+        if (hit) {
+            playerCount++;
+            statusPanel.setPlayerHitCount(playerCount);
         }
-        statusPanel.setTopLine("You " + hitMiss + " " + targetPosition +" "+ destroyed);
+        if(hitTreasure) {
+            statusMessage = "TREASURE FOUND! YOU HAVE 1 MORE MOVE!!";
+            extraTurn();
+            //doPlayerTurn(targetPosition);
+            playSound("treasure.wav"); // Optionally play a sound
+        }
+        String hitMiss = hit ? "HIT!" : "MISSED!";
+        String destroyed = "";
+
+        Marker marker = computer.getMarkerAtPosition(targetPosition);
+        if(hit && marker.getAssociatedShip() != null && marker.getAssociatedShip().isDestroyed()) {
+            destroyed = "ENEMY'S SHIP HAS SUNK!";
+        }
+        statusPanel.setTopLine(statusMessage + " YOU " + hitMiss + " " + destroyed);
+
         if(computer.areAllShipsDestroyed()) {
-            // Player wins!
+            playSound("win.wav");
             gameState = GameState.GameOver;
             statusPanel.showGameOver(true);
         }
     }
+
 
     /**
      * Processes the AI turn by using the AI Controller to select a move.
@@ -238,19 +353,33 @@ public class GamePanel extends JPanel implements MouseListener, MouseMotionListe
     private void doAITurn() {
         Position aiMove = aiController.selectMove();
         boolean hit = player.markPosition(aiMove);
-        String hitMiss = hit ? "Hit" : "Missed";
+        boolean hitTreasure = player.isTreasureAtPosition(aiMove);
+        String hitMiss = hit ? "HIT!" : "MISSED!";
         String destroyed = "";
-        if(hit && player.getMarkerAtPosition(aiMove).getAssociatedShip().isDestroyed()) {
-            destroyed = "(Sunk)";
+        //String statusMessage = "";
+        if(hit) {
+            compCount++;
+            statusPanel.setCompHitCount(compCount);
         }
-        statusPanel.setBottomLine("Enemy " + hitMiss + " " + aiMove + " " + destroyed);
+        if(hitTreasure) {
+            aiExtraTurn();
+            //statusMessage = "TREASURE FOUND! ENEMY HAS 1 MORE MOVE!";
+        }
+        Marker marker = player.getMarkerAtPosition(aiMove);
+        if(hit && marker.getAssociatedShip() != null && marker.getAssociatedShip().isDestroyed()) {
+            destroyed = "YOUR SHIP HAS SUNK!";
+        }
+        statusPanel.setBottomLine(/*statusMessage */"ENEMY " + hitMiss + " " + destroyed);
         if(player.areAllShipsDestroyed()) {
             // Computer wins!
+            playSound("lose.wav");
             gameState = GameState.GameOver;
             statusPanel.showGameOver(false);
+        } else if (aiHasExtraTurn && !player.areAllShipsDestroyed()) {
+            aiHasExtraTurn = false;
+            doAITurn();
         }
     }
-
     /**
      * Updates the ship being placed location if the mouse is inside the grid.
      *
@@ -278,8 +407,8 @@ public class GamePanel extends JPanel implements MouseListener, MouseMotionListe
         }
         // Update drawing position to use the new target position
         placingShip.setDrawPosition(new Position(targetPos),
-                                    new Position(player.getPosition().x + targetPos.x * SelectionGrid.CELL_SIZE,
-                                 player.getPosition().y + targetPos.y * SelectionGrid.CELL_SIZE));
+                new Position(player.getPosition().x + targetPos.x * SelectionGrid.CELL_SIZE,
+                        player.getPosition().y + targetPos.y * SelectionGrid.CELL_SIZE));
         // Store the grid position for other testing cases
         tempPlacingPosition = targetPos;
         // Change the colour of the ship based on whether it could be placed at the current location.

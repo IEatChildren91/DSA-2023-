@@ -10,6 +10,7 @@ import java.awt.*;
  * it is representing the location where a ship is.
  */
 public class Marker extends Rectangle {
+    private final Color TREASURE_COLOUR = new Color(0, 255, 255);
     /**
      * The colour to show when a ship is located at this marker.
      */
@@ -17,7 +18,7 @@ public class Marker extends Rectangle {
     /**
      * The colour to show when there is no ship at this marker.
      */
-    private final Color MISS_COLOUR = new Color(100, 149, 237);
+    private final Color MISS_COLOUR = new Color(154, 255, 135);
     /**
      * Padding around the edges of the filled rectangle to make it a little smaller.
      */
@@ -31,6 +32,7 @@ public class Marker extends Rectangle {
      * when null will use MISS_COLOUR.
      */
     private Ship shipAtMarker;
+    private Position treasureAtMarker;
 
     /**
      * Prepares the marker with a default state where it is ready to draw
@@ -94,6 +96,15 @@ public class Marker extends Rectangle {
     public boolean isShip() {
         return shipAtMarker != null;
     }
+    public boolean isTreasure() {
+        return treasureAtMarker != null;
+    }
+
+    public void setAsTreasure(Position treasurePosition) {
+        this.treasureAtMarker = treasurePosition; // Set the treasure position
+    }
+
+
 
     /**
      * Gets the associated ship if there is one, otherwise it will be null.
@@ -112,9 +123,17 @@ public class Marker extends Rectangle {
      * @param g Reference to the Graphics object for drawing.
      */
     public void paint(Graphics g) {
-        if(!showMarker) return;
+        if (!showMarker) return;
 
-        g.setColor(isShip() ? HIT_COLOUR : MISS_COLOUR);
-        g.fillRect(position.x+PADDING+1, position.y+PADDING+1, width-PADDING*2, height-PADDING*2);
+        if (isTreasure()) {
+            g.setColor(TREASURE_COLOUR);
+        } else if (isShip()) {
+            g.setColor(HIT_COLOUR);
+        } else {
+            g.setColor(MISS_COLOUR);
+        }
+
+        g.fillRect(position.x + PADDING - 1, position.y + PADDING - 1, (width - PADDING * 2) + 2, (height - PADDING * 2) + 2);
     }
+
 }

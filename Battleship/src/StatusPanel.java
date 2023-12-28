@@ -1,5 +1,8 @@
 import java.awt.*;
-
+import java.awt.Font;
+import java.awt.GraphicsEnvironment;
+import java.io.File;
+import java.io.IOException;
 /**
  * Battleship
  * Author: Kudo
@@ -10,22 +13,28 @@ import java.awt.*;
  * additional methods to set the messages to custom values.
  */
 public class StatusPanel extends Rectangle{
+    private String playerHitCount = "PLAYER HITS: 0";
+    private String compHitCount = "COMPUTER HITS: 0";
     /**
      * The font to use for drawing both of the messages.
      */
-    private final Font font = new Font("Garamond", Font.BOLD, 20);
+    private final Font font = new Font("Monospaced", Font.BOLD, 30);
+    private final Font font2 = new Font ("Monospaced", Font.ITALIC + Font.BOLD + Font.CENTER_BASELINE, 30);
+    private final Font font3 = new Font ("Monospaced", Font.ITALIC, 30);
+    private Font audiowide;
+
     /**
      * Message to show on the top line during ship placement.
      */
-    private final String placingShipLine1 = "Put the Ships in map!";
+    private final String placingShipLine1 = "PLACE YOUR SHIPS!";
     /**
      * Message to show on the bottom line during ship placement.
      */
-    private final String placingShipLine2 = "R to rotate the Ships.";
+    private final String placingShipLine2 = "PRESS R TO ROTATE THE SHIPS.";
     /**
      * Message to show on the top line when the game is lost.
      */
-    private final String gameOverLossLine = "DEFEAT :(";
+    private final String gameOverLossLine = "YOU ARE DEFEATED :(";
     /**
      * Message to show on the top line when the game is won.
      */
@@ -33,7 +42,7 @@ public class StatusPanel extends Rectangle{
     /**
      * Message to show on the bottom line when the game is won or lost.
      */
-    private final String gameOverBottomLine = "Press S to restart.";
+    private final String gameOverBottomLine = "PRESS S TO RESTART AGAIN.";
 
     /**
      * The current message to display on the top line.
@@ -55,6 +64,13 @@ public class StatusPanel extends Rectangle{
     public StatusPanel(Position position, int width, int height) {
         super(position, width, height);
         reset();
+    }
+    public void setPlayerHitCount(int hits) {
+        playerHitCount = "PLAYER HITS: " + hits; // Update the hit count
+    }
+
+    public void setCompHitCount(int hits) {
+        compHitCount = "COMPUTER HITS: " + hits; // Update the hit count
     }
 
     /**
@@ -100,13 +116,25 @@ public class StatusPanel extends Rectangle{
      * @param g Reference to the Graphics object for rendering.
      */
     public void paint(Graphics g) {
-        g.setColor(Color.LIGHT_GRAY);
-        g.fillRect(position.x, position.y, width, height);
+        try {
+            audiowide = Font.createFont(Font.TRUETYPE_FONT, new File("Audiowide-Regular.ttf")).deriveFont(25f); // Adjust the font size as needed
+            GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+            ge.registerFont(audiowide);
+        } catch (IOException | FontFormatException e) {
+            e.printStackTrace();
+            audiowide = new Font("Serif", Font.BOLD, 25); // Fallback font in case of error
+        }
         g.setColor(Color.BLACK);
-        g.setFont(font);
+        g.fillRect(position.x, position.y, width, height);
+        g.setColor(new Color(50, 205, 50));
+        g.setFont(audiowide);
         int strWidth = g.getFontMetrics().stringWidth(topLine);
-        g.drawString(topLine, position.x+width/2-strWidth/2, position.y+20);
+        g.drawString(topLine, position.x+width/2-strWidth/2, position.y+70);
         strWidth = g.getFontMetrics().stringWidth(bottomLine);
-        g.drawString(bottomLine, position.x+width/2-strWidth/2, position.y+40);
+        g.drawString(bottomLine, position.x+width/2-strWidth/2, position.y+70+30+10);
+        //g.setFont(font2);
+        g.setColor(Color.RED);
+        g.drawString(playerHitCount, position.x + 750, position.y + height - 20);
+        g.drawString(compHitCount, position.x + 115, position.y + height - 20);
     }
 }

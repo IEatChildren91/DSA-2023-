@@ -1,3 +1,6 @@
+import java.awt.*;
+import java.util.Objects;
+
 /**
  * Battleship
  * Author: Kudo
@@ -128,8 +131,11 @@ public class Position {
      *
      * @return A string in the form (x, y)
      */
-    @Override
-    public String toString() {
-        return "(" + x + ", " + y + ")";
+    //@Override
+    //public String toString() {
+    //  return "(" + y + ", " + x + ")";
+    //}
+    public int hashCode() {
+        return Objects.hash(x,y);
     }
 }

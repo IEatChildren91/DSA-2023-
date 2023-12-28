@@ -1,7 +1,11 @@
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.Clip;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.io.File;
 
 public class Game implements KeyListener {
     /**
@@ -25,17 +29,18 @@ public class Game implements KeyListener {
     public Game() {
         // Choose Level Difficulty
         String[] options = new String[] {"Easy", "Medium", "Hard"};
+        //playSound("heheboi.wav");
         Font font = new Font("Garamond", Font.BOLD, 20);
         UIManager.put("OptionPane.messageFont", font);
-        String message = "The Easy mode will have the AI making random moves.\nIn Medium level, the AI will concentrate on areas where it detects ships."
+        String message = "In Easy level, the AI making random moves.\nIn Medium level, the AI will concentrate on areas where it detects ships."
                 + "\nIn Hard level, the AI will make more intelligent decisions compared to Medium.";
         int difficultyChoice = JOptionPane.showOptionDialog(null, message,
                 "Choose Level Difficulty",
                 JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE,
                 null, options, options[0]);
 
-        JFrame frame = new JFrame("BATTLESHIP   ");
-        frame.setLocation(560,0);
+        JFrame frame = new JFrame("helpppp meeee");
+        frame.setLocationRelativeTo(null);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setResizable(false);
 
@@ -44,9 +49,9 @@ public class Game implements KeyListener {
 
         frame.addKeyListener(this);
         frame.pack();
+        frame.setLocationRelativeTo(null);
         frame.setVisible(true);
     }
-
     /**
      * Called when the key is pressed down. Passes the key press on to the GamePanel.
      *

@@ -54,8 +54,8 @@ public class BattleshipAI {
      */
     private void createValidMoveList() {
         validMoves = new ArrayList<>();
-        for(int x = 0; x < SelectionGrid.GRID_WIDTH; x++) {
-            for(int y = 0; y < SelectionGrid.GRID_HEIGHT; y++) {
+        for(int x = 1; x < SelectionGrid.GRID_WIDTH; x++) {
+            for(int y = 1; y < SelectionGrid.GRID_HEIGHT; y++) {
                 validMoves.add(new Position(x,y));
             }
         }

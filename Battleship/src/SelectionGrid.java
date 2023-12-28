@@ -1,7 +1,15 @@
 import java.awt.*;
+import java.awt.image.ImageObserver;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.awt.Font;
+import java.awt.GraphicsEnvironment;
+import java.io.File;
+import java.io.IOException;
+import javax.swing.ImageIcon;
+
+
 
 /**
  * Battleship
@@ -11,19 +19,21 @@ import java.util.Random;
  * Defines the grid for storing Ships with a grid of markers to
  * indicate hit/miss detection.
  */
-public class SelectionGrid extends Rectangle {
+public class SelectionGrid extends Rectangle implements ImageObserver {
+    private Font VT323;
+    private List<Position> treasures;
     /**
      * Size of each grid cell in pixels.
      */
-    public static final int CELL_SIZE = 38;
+    public static final int CELL_SIZE = 50;
     /**
      * Number of grid cells on the Horizontal axis.
      */
-    public static final int GRID_WIDTH = 10;
+    public static final int GRID_WIDTH = 11;
     /**
      * Number of grid cells on the Vertical axis.
      */
-    public static final int GRID_HEIGHT = 10;
+    public static final int GRID_HEIGHT = 11;
     /**
      * Definitions of the number of Ships, and the number of segments that make up each of those ships.
      */
@@ -41,6 +51,7 @@ public class SelectionGrid extends Rectangle {
      * Shared random reference to use for randomisation of the ship placement.
      */
     private Random rand;
+    private Random rand2;
     /**
      * Ships are drawn when true. This is mostly used to make the player's ships always show.
      */
@@ -60,9 +71,42 @@ public class SelectionGrid extends Rectangle {
         super(x, y, CELL_SIZE*GRID_WIDTH, CELL_SIZE*GRID_HEIGHT);
         createMarkerGrid();
         ships = new ArrayList<>();
+        treasures = new ArrayList<>();
+        rand2 = new Random();
+        initilizeTreasures(3);
         rand = new Random();
         showShips = false;
+        try {
+            VT323 = Font.createFont(Font.TRUETYPE_FONT, new File("VT323-Regular.ttf")).deriveFont(40f); // Adjust the font size as needed
+            GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+            ge.registerFont(VT323);
+        } catch (IOException | FontFormatException e) {
+            e.printStackTrace();
+            VT323 = new Font("Serif", Font.BOLD, 16); // Fallback font in case of error
+        }
     }
+    private void initilizeTreasures(int numOfTreasures) {
+        while (treasures.size() < numOfTreasures) {
+            int x = rand2.nextInt(GRID_WIDTH-1)+1;
+            int y = rand2.nextInt(GRID_HEIGHT-1)+1;
+            Position potentialTreasure = new Position(x, y);
+
+            if (!isTreasureAtPosition(potentialTreasure)) {
+                treasures.add(potentialTreasure);
+                markers[x][y].setAsTreasure(potentialTreasure);  // Ensure that the marker knows about the treasure
+            }
+        }
+    }
+
+    public boolean isTreasureAtPosition (Position pos) {
+        for (Position treasure: treasures) {
+            if (treasure.equals(pos)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
 
     /**
      * Draws the ships if all ships on this grid are to be shown, or if debug mode is active,
@@ -73,14 +117,17 @@ public class SelectionGrid extends Rectangle {
      * @param g Reference to the Graphics object for rendering.
      */
     public void paint(Graphics g) {
-        for(Ship ship : ships) {
-            if(showShips || GamePanel.debugModeActive || ship.isDestroyed()) {
+        // Draw the grid and other components
+        for (Ship ship : ships) {
+            if (showShips || GamePanel.debugModeActive || ship.isDestroyed()) {
                 ship.paint(g);
             }
         }
         drawMarkers(g);
         drawGrid(g);
+        drawTreasures(g);
     }
+
 
     /**
      * Modifies the state of the grid to show all the ships if set to true.
@@ -102,6 +149,7 @@ public class SelectionGrid extends Rectangle {
                 markers[x][y].reset();
             }
         }
+        //treasures.clear();
         ships.clear();
         showShips = false;
         allShipsDestroyed = false;
@@ -115,8 +163,16 @@ public class SelectionGrid extends Rectangle {
      * @return True if the marked position was a ship.
      */
     public boolean markPosition(Position posToMark) {
+        if(posToMark.x < 1 || posToMark.y < 1) {
+            return false;
+        }
+
         markers[posToMark.x][posToMark.y].mark();
 
+        boolean hitTreasure = isTreasureAtPosition(posToMark);
+        if (hitTreasure) {
+            markers[posToMark.x][posToMark.y].setAsTreasure(posToMark); // Mark the marker as a treasure
+        }
         allShipsDestroyed = true;
         for(Ship ship : ships) {
             if(!ship.isDestroyed()) {
@@ -124,8 +180,9 @@ public class SelectionGrid extends Rectangle {
                 break;
             }
         }
-        return markers[posToMark.x][posToMark.y].isShip();
+        return markers[posToMark.x][posToMark.y].isShip() || hitTreasure;
     }
+
 
     /**
      * Checks if all ships have been destroyed.
@@ -183,7 +240,7 @@ public class SelectionGrid extends Rectangle {
      * @return True if the ship can be placed with the specified properties.
      */
     public boolean canPlaceShipAt(int gridX, int gridY, int segments, boolean sideways) {
-        if(gridX < 0 || gridY < 0) return false;
+        if(gridX < 1 || gridY < 1) return false;
 
         if(sideways) { // handle the case when horizontal
             if(gridY > GRID_HEIGHT || gridX + segments > GRID_WIDTH) return false;
@@ -205,19 +262,55 @@ public class SelectionGrid extends Rectangle {
      * @param g Reference to the Graphics object for rendering.
      */
     private void drawGrid(Graphics g) {
-        g.setColor(Color.BLACK);
-        // Draw vertical lines
-        int y2 = position.y;
-        int y1 = position.y+height;
-        for(int x = 0; x <= GRID_WIDTH; x++)
-            g.drawLine(position.x+x * CELL_SIZE, y1, position.x+x * CELL_SIZE, y2);
+        Graphics2D g2d = (Graphics2D) g.create();
 
-        // Draw horizontal lines
-        int x2 = position.x;
-        int x1 = position.x+width;
-        for(int y = 0; y <= GRID_HEIGHT; y++)
-            g.drawLine(x1, position.y+y * CELL_SIZE, x2, position.y+y * CELL_SIZE);
+        Color labelBG = new Color(10, 139-50, 50-50);
+        g2d.setColor(labelBG);
+
+        g2d.fillRect(position.x, position.y, GRID_WIDTH * CELL_SIZE, CELL_SIZE); //top row
+        g2d.fillRect(position.x, position.y, CELL_SIZE, GRID_HEIGHT * CELL_SIZE); //leftmost column
+
+        g2d.setColor(new Color(0, 255, 100)); // Set the color for the grid lines
+        float thickness = 2.0f; // Adjust for desired thickness
+        g2d.setStroke(new BasicStroke(thickness));
+
+        g2d.setFont(VT323);
+
+        // Get font metrics for centering text
+        FontMetrics metrics = g2d.getFontMetrics(VT323);
+
+        // Draw vertical lines and letters
+        for (int x = 0; x <= GRID_WIDTH; x++) {
+            int xPos = position.x + x * CELL_SIZE;
+            g2d.drawLine(xPos, position.y, xPos, position.y + height);
+            if (x > 0 && x <= 10) { // Skip the first column for numbers
+                char label = (char) ('A' + x - 1); // Letters start from 'A'
+                String labelText = String.valueOf(label);
+                int labelWidth = metrics.stringWidth(labelText);
+                int labelHeight = metrics.getHeight();
+                // Center text in the middle of the cell
+                g2d.drawString(labelText, xPos + (CELL_SIZE - labelWidth) / 2, position.y + (CELL_SIZE + labelHeight) / 2 - metrics.getDescent());
+            }
+        }
+
+        // Draw horizontal lines and numbers
+        for (int y = 0; y <= GRID_HEIGHT; y++) {
+            int yPos = position.y + y * CELL_SIZE;
+            g2d.drawLine(position.x, yPos, position.x + width, yPos);
+            if (y > 0) { // Skip the first row for letters
+                String labelText = String.valueOf(y - 1);
+                int labelWidth = metrics.stringWidth(labelText);
+                int labelHeight = metrics.getHeight();
+                // Center text in the middle of the cell
+                g2d.drawString(labelText, position.x + (CELL_SIZE - labelWidth) / 2, yPos + (CELL_SIZE + labelHeight) / 2 - metrics.getDescent());
+            }
+        }
+
+        g2d.dispose();
     }
+
+
+
 
     /**
      * Draws all the markers. The markers will determine individually if it is necessary to draw.
@@ -273,8 +366,8 @@ public class SelectionGrid extends Rectangle {
      */
     public void placeShip(int gridX, int gridY, int segments, boolean sideways) {
         placeShip(new Ship(new Position(gridX, gridY),
-                           new Position(position.x+gridX*CELL_SIZE, position.y+gridY*CELL_SIZE),
-                            segments, sideways), gridX, gridY);
+                new Position(position.x+gridX*CELL_SIZE, position.y+gridY*CELL_SIZE),
+                segments, sideways), gridX, gridY);
     }
 
     /**
@@ -297,5 +390,22 @@ public class SelectionGrid extends Rectangle {
                 markers[gridX][gridY+y].setAsShip(ships.get(ships.size()-1));
             }
         }
+    }
+    private void drawTreasures (Graphics g) {
+        for (Position treasure : treasures) {
+            if (markers[treasure.x][treasure.y].isMarked() || GamePanel.debugModeActive) {
+                int x = position.x + treasure.x * CELL_SIZE + CELL_SIZE / 2;
+                int y = position.y + treasure.y * CELL_SIZE + CELL_SIZE / 2;
+                int treasureSize = 30;
+
+                g.setColor(new Color(255, 255, 38));
+                g.fillOval(x - treasureSize / 2, y - treasureSize / 2, treasureSize, treasureSize);
+            }
+        }
+    }
+
+    @Override
+    public boolean imageUpdate(Image img, int infoflags, int x, int y, int width, int height) {
+        return false;
     }
 }
