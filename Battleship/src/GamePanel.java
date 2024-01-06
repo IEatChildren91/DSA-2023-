@@ -1,6 +1,8 @@
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
@@ -148,12 +150,15 @@ public class GamePanel extends JPanel implements MouseListener, MouseMotionListe
             e.printStackTrace();
         }
     }
-    public GamePanel(int aiChoice) {
+    public GamePanel(Game.GameDifficulty difficulty) {
+
         try {
             radarBG = ImageIO.read(new File("radar.png")); // Load the radar image
         } catch (IOException e) {
             e.printStackTrace();
         }
+
+        int aiChoice = mapDifficultyToAIChoice(difficulty);
         int gap = 60; // Gap between the two grids
         computer = new SelectionGrid(0, 0);
         player = new SelectionGrid(computer.getWidth() + gap, 0);
@@ -174,6 +179,18 @@ public class GamePanel extends JPanel implements MouseListener, MouseMotionListe
         aiHasExtraTurn = false;
         restart();
     }
+
+    private int mapDifficultyToAIChoice(Game.GameDifficulty difficulty) {
+        switch (difficulty) {
+            case EASY:
+                return 0;
+            case MEDIUM:
+                return 1;
+            case HARD:
+                return 2;
+            default:
+                return 0;} 
+        }
 
     /**
      * Draws the grids for both players, any ship being placed, and the status panel.
