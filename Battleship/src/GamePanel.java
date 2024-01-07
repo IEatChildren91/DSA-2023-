@@ -1,3 +1,4 @@
+import javax.sound.sampled.LineUnavailableException;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.KeyAdapter;
@@ -11,8 +12,13 @@ import javax.sound.sampled.Clip;
 import javax.sound.sampled.AudioInputStream;
 import java.io.File;
 import java.awt.image.BufferedImage;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.TimerTask;
+import java.util.Timer;
+
 import javax.imageio.ImageIO;
+import javax.sound.sampled.*;
 
 /**
  * Battleship
@@ -106,15 +112,43 @@ public class GamePanel extends JPanel implements MouseListener, MouseMotionListe
     }
     public static void playSound(String soundFileName) {
         try {
+            // Load the sound file into an AudioInputStream.
             File soundFile = new File(soundFileName);
             AudioInputStream audioIn = AudioSystem.getAudioInputStream(soundFile);
+
+            // Retrieve the format of the loaded audio file.
+            AudioFormat baseFormat = audioIn.getFormat();
+
+            // Define a new audio format with a lower bit depth (16-bit).
+            // This is done to ensure compatibility with a wider range of audio systems.
+            AudioFormat decodedFormat = new AudioFormat(
+                    AudioFormat.Encoding.PCM_SIGNED, // Encoding type
+                    baseFormat.getSampleRate(),      // Preserve original sample rate
+                    16,                              // Change bit depth to 16-bit
+                    baseFormat.getChannels(),        // Preserve number of audio channels
+                    baseFormat.getChannels() * 2,    // Calculate frame size (16-bit stereo = 4 bytes/frame)
+                    baseFormat.getSampleRate(),      // Preserve sample rate for frame rate
+                    false                            // Use little-endian byte order
+            );
+
+            // Convert the original audio input stream to the new format.
+            AudioInputStream decodedAudioIn = AudioSystem.getAudioInputStream(decodedFormat, audioIn);
+
+            // Prepare an audio clip for playback.
             Clip clip = AudioSystem.getClip();
-            clip.open(audioIn);
-            clip.start();
-        } catch (Exception e) {
+            clip.open(decodedAudioIn);
+            clip.start(); // Start playing the audio.
+        } catch (UnsupportedAudioFileException | IOException e) {
+            // Handle exceptions related to file format and IO issues.
+            e.printStackTrace();
+        } catch (LineUnavailableException e) {
+            // Handle exception where the audio line is not available for playback.
+            System.err.println("Audio line for playback is not available.");
             e.printStackTrace();
         }
     }
+
+
     public GamePanel(Game.GameDifficulty difficulty) {
 
         try {
@@ -308,7 +342,13 @@ public class GamePanel extends JPanel implements MouseListener, MouseMotionListe
             statusMessage = "TREASURE FOUND! YOU HAVE 1 MORE MOVE!!";
             extraTurn();
             //doPlayerTurn(targetPosition);
-            playSound("treasure.wav"); // Optionally play a sound
+            Timer timer = new Timer();
+            timer.schedule(new TimerTask() {
+                @Override
+                public void run() {
+                    playSound("treasure.wav");
+                }
+            }, 300);
         }
         String hitMiss = hit ? "HIT!" : "MISSED!";
         String destroyed = "";
