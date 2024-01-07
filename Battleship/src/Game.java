@@ -65,14 +65,14 @@ public class Game implements KeyListener {
         backgroundPanel.add(buttonPanel, BorderLayout.SOUTH);
 
         // Initializing the game panel
-        gamePanel = new GamePanel(Game.GameDifficulty.EASY);
-        gamePanel.setFocusable(true);
+        // gamePanel = new GamePanel(Game.GameDifficulty.EASY);
+        // gamePanel.setFocusable(true);
         frame.getContentPane().add(backgroundPanel);
         frame.addKeyListener(this);// Adding key listener for keyboard input
         frame.pack();// Packing the frame to arrange its components
         frame.setLocationRelativeTo(null);// Centering the frame again after packing
         frame.setVisible(true);        
-        gamePanel.requestFocusInWindow();
+        // gamePanel.requestFocusInWindow();
 
     }
 
@@ -319,10 +319,17 @@ public class Game implements KeyListener {
         gamePanel = new GamePanel(difficulty);
         frame.getContentPane().removeAll();
         frame.getContentPane().add(gamePanel);
+
         frame.pack();
         frame.revalidate();
         frame.repaint();
+        frame.setLocation(200, 50);
+
+        // Key input
+        gamePanel.setFocusable(true);
         gamePanel.requestFocusInWindow();
+        gamePanel.addKeyListener(this);
+
 
     }
 
