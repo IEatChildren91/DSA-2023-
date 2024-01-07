@@ -323,7 +323,8 @@ public class Game implements KeyListener {
         frame.pack();
         frame.revalidate();
         frame.repaint();
-        frame.setLocation(200, 50);
+        frame.setLocationRelativeTo(null);
+
 
         // Key input
         gamePanel.setFocusable(true);
