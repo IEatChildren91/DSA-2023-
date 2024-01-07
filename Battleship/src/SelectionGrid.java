@@ -1,5 +1,7 @@
+
 import java.awt.*;
-import java.awt.image.ImageObserver;
+import java.awt.image.BufferedImage;
+import java.awt.Container;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -7,7 +9,11 @@ import java.awt.Font;
 import java.awt.GraphicsEnvironment;
 import java.io.File;
 import java.io.IOException;
-import javax.swing.ImageIcon;
+import javax.imageio.ImageIO;
+import javax.swing.*;
+import java.awt.geom.AffineTransform;
+import java.util.HashMap;
+import java.util.Map;
 
 
 
@@ -19,9 +25,17 @@ import javax.swing.ImageIcon;
  * Defines the grid for storing Ships with a grid of markers to
  * indicate hit/miss detection.
  */
-public class SelectionGrid extends Rectangle implements ImageObserver {
+public class SelectionGrid extends Rectangle {
+    public boolean isComputerGrid;
+    public boolean isPlayer;
+    public boolean showMines;
+    private Map <Position, Boolean> treasureStates = new HashMap<>();
+    private BufferedImage closedtreasureImage;
+    private BufferedImage opentreasureImage;
+    private BufferedImage mineImage;
     private Font VT323;
     private List<Position> treasures;
+    private List<Position> mines;
     /**
      * Size of each grid cell in pixels.
      */
@@ -37,7 +51,7 @@ public class SelectionGrid extends Rectangle implements ImageObserver {
     /**
      * Definitions of the number of Ships, and the number of segments that make up each of those ships.
      */
-    public static final int[] BOAT_SIZES = {5,4,3,3,2};
+    public static final int[] BOAT_SIZES = {5, 4, 3, 3, 2};
 
     /**
      * A grid of markers to indicate visually the hit/miss on attacks.
@@ -56,6 +70,7 @@ public class SelectionGrid extends Rectangle implements ImageObserver {
      * Ships are drawn when true. This is mostly used to make the player's ships always show.
      */
     private boolean showShips;
+    private boolean showTreasures;
     /**
      * True once all the elements in ships have been destroyed.
      */
@@ -67,11 +82,13 @@ public class SelectionGrid extends Rectangle implements ImageObserver {
      * @param x X coordinate to offset the grid by in pixels.
      * @param y Y coordinate to offset the grid by in pixels.
      */
-    public SelectionGrid(int x, int y) {
-        super(x, y, CELL_SIZE*GRID_WIDTH, CELL_SIZE*GRID_HEIGHT);
+    public SelectionGrid(int x, int y, boolean isComputerGrid) {
+        super(x, y, CELL_SIZE * GRID_WIDTH, CELL_SIZE * GRID_HEIGHT);
+        this.isComputerGrid = isComputerGrid;
         createMarkerGrid();
         ships = new ArrayList<>();
         treasures = new ArrayList<>();
+        mines = new ArrayList<>();
         rand2 = new Random();
         initilizeTreasures(3);
         rand = new Random();
@@ -80,33 +97,35 @@ public class SelectionGrid extends Rectangle implements ImageObserver {
             VT323 = Font.createFont(Font.TRUETYPE_FONT, new File("VT323-Regular.ttf")).deriveFont(40f); // Adjust the font size as needed
             GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
             ge.registerFont(VT323);
+            closedtreasureImage = ImageIO.read(new File("closed.png"));
+            opentreasureImage = ImageIO.read(new File("open.png"));
+            mineImage = ImageIO.read(new File("mine.png"));
         } catch (IOException | FontFormatException e) {
             e.printStackTrace();
             VT323 = new Font("Serif", Font.BOLD, 16); // Fallback font in case of error
         }
     }
     private void initilizeTreasures(int numOfTreasures) {
-        while (treasures.size() < numOfTreasures) {
-            int x = rand2.nextInt(GRID_WIDTH-1)+1;
-            int y = rand2.nextInt(GRID_HEIGHT-1)+1;
+        while (treasures.size() < numOfTreasures && isComputerGrid) {
+            int x = rand2.nextInt(GRID_WIDTH - 1) + 1;
+            int y = rand2.nextInt(GRID_HEIGHT - 1) + 1;
             Position potentialTreasure = new Position(x, y);
 
-            if (!isTreasureAtPosition(potentialTreasure)) {
+            if (!isTreasureAtPosition(potentialTreasure) && !markers[x][y].isShip()) {
                 treasures.add(potentialTreasure);
-                markers[x][y].setAsTreasure(potentialTreasure);  // Ensure that the marker knows about the treasure
+                treasureStates.put(potentialTreasure, false); // Initialize as not hit
+                markers[x][y].setAsTreasure(potentialTreasure);
             }
         }
     }
-
-    public boolean isTreasureAtPosition (Position pos) {
-        for (Position treasure: treasures) {
+    public boolean isTreasureAtPosition(Position pos) {
+        for (Position treasure : treasures) {
             if (treasure.equals(pos)) {
                 return true;
             }
         }
         return false;
     }
-
 
     /**
      * Draws the ships if all ships on this grid are to be shown, or if debug mode is active,
@@ -117,17 +136,17 @@ public class SelectionGrid extends Rectangle implements ImageObserver {
      * @param g Reference to the Graphics object for rendering.
      */
     public void paint(Graphics g) {
+        drawGrid(g);
+        drawMarkers(g);
         // Draw the grid and other components
         for (Ship ship : ships) {
             if (showShips || GamePanel.debugModeActive || ship.isDestroyed()) {
                 ship.paint(g);
             }
         }
-        drawMarkers(g);
-        drawGrid(g);
         drawTreasures(g);
+        drawMine(g);
     }
-
 
     /**
      * Modifies the state of the grid to show all the ships if set to true.
@@ -137,6 +156,9 @@ public class SelectionGrid extends Rectangle implements ImageObserver {
     public void setShowShips(boolean showShips) {
         this.showShips = showShips;
     }
+    public void setShowTreasures (boolean showTreasures) {
+        this.showTreasures = showTreasures;
+    }
 
     /**
      * Resets the SelectionGrid by telling all the markers to reset,
@@ -144,12 +166,14 @@ public class SelectionGrid extends Rectangle implements ImageObserver {
      * showing any ships, and a state where no ships have been destroyed.
      */
     public void reset() {
-        for(int x = 0; x < GRID_WIDTH; x++) {
-            for(int y = 0; y < GRID_HEIGHT; y++) {
+        for (int x = 0; x < GRID_WIDTH; x++) {
+            for (int y = 0; y < GRID_HEIGHT; y++) {
                 markers[x][y].reset();
             }
         }
-        //treasures.clear();
+        for (Position treasure : treasures) {
+            treasureStates.put(treasure, false); // Reset treasure to closed state
+        }
         ships.clear();
         showShips = false;
         allShipsDestroyed = false;
@@ -162,20 +186,20 @@ public class SelectionGrid extends Rectangle implements ImageObserver {
      * @param posToMark Position to mark.
      * @return True if the marked position was a ship.
      */
-    public boolean markPosition(Position posToMark) {
-        if(posToMark.x < 1 || posToMark.y < 1) {
+    public boolean markPosition(Position posToMark, boolean isPlayer) {
+        if (posToMark.x < 1 || posToMark.y < 1) {
             return false;
         }
 
         markers[posToMark.x][posToMark.y].mark();
 
         boolean hitTreasure = isTreasureAtPosition(posToMark);
-        if (hitTreasure) {
+        if (hitTreasure && isPlayer) {
             markers[posToMark.x][posToMark.y].setAsTreasure(posToMark); // Mark the marker as a treasure
         }
         allShipsDestroyed = true;
-        for(Ship ship : ships) {
-            if(!ship.isDestroyed()) {
+        for (Ship ship : ships) {
+            if (!ship.isDestroyed()) {
                 allShipsDestroyed = false;
                 break;
             }
@@ -221,9 +245,9 @@ public class SelectionGrid extends Rectangle implements ImageObserver {
      * @return Returns either (-1,-1) for an invalid position, or the corresponding grid position related to the coordinates.
      */
     public Position getPositionInGrid(int mouseX, int mouseY) {
-        if(!isPositionInside(new Position(mouseX,mouseY))) return new Position(-1,-1);
+        if (!isPositionInside(new Position(mouseX, mouseY))) return new Position(-1, -1);
 
-        return new Position((mouseX - position.x)/CELL_SIZE, (mouseY - position.y)/CELL_SIZE);
+        return new Position((mouseX - position.x) / CELL_SIZE, (mouseY - position.y) / CELL_SIZE);
     }
 
     /**
@@ -233,24 +257,24 @@ public class SelectionGrid extends Rectangle implements ImageObserver {
      * This is handled separately depending on whether it is a horizontal (sideways) or
      * vertical ship.
      *
-     * @param gridX Grid X coordinate.
-     * @param gridY Grid Y coordinate.
+     * @param gridX    Grid X coordinate.
+     * @param gridY    Grid Y coordinate.
      * @param segments The number of cells that tail the coordinate.
      * @param sideways True indicates it is horizontal, false insides it is vertical.
      * @return True if the ship can be placed with the specified properties.
      */
     public boolean canPlaceShipAt(int gridX, int gridY, int segments, boolean sideways) {
-        if(gridX < 1 || gridY < 1) return false;
+        if (gridX < 1 || gridY < 1) return false;
 
-        if(sideways) { // handle the case when horizontal
-            if(gridY > GRID_HEIGHT || gridX + segments > GRID_WIDTH) return false;
-            for(int x = 0; x < segments; x++) {
-                if(markers[gridX+x][gridY].isShip()) return false;
+        if (sideways) { // handle the case when horizontal
+            if (gridY > GRID_HEIGHT || gridX + segments > GRID_WIDTH) return false;
+            for (int x = 0; x < segments; x++) {
+                if (markers[gridX + x][gridY].isShip() || isTreasureAtPosition(new Position(gridX + x, gridY))) return false;
             }
         } else { // handle the case when vertical
-            if(gridY + segments > GRID_HEIGHT || gridX > GRID_WIDTH) return false;
-            for(int y = 0; y < segments; y++) {
-                if(markers[gridX][gridY+y].isShip()) return false;
+            if (gridY + segments > GRID_HEIGHT || gridX > GRID_WIDTH) return false;
+            for (int y = 0; y < segments; y++) {
+                if (markers[gridX][gridY + y].isShip() || isTreasureAtPosition(new Position(gridX, gridY + y))) return false;
             }
         }
         return true;
@@ -264,7 +288,7 @@ public class SelectionGrid extends Rectangle implements ImageObserver {
     private void drawGrid(Graphics g) {
         Graphics2D g2d = (Graphics2D) g.create();
 
-        Color labelBG = new Color(10, 139-50, 50-50);
+        Color labelBG = new Color(10, 139 - 50, 50 - 50);
         g2d.setColor(labelBG);
 
         g2d.fillRect(position.x, position.y, GRID_WIDTH * CELL_SIZE, CELL_SIZE); //top row
@@ -310,16 +334,14 @@ public class SelectionGrid extends Rectangle implements ImageObserver {
     }
 
 
-
-
     /**
      * Draws all the markers. The markers will determine individually if it is necessary to draw.
      *
      * @param g Reference to the Graphics object for rendering.
      */
     private void drawMarkers(Graphics g) {
-        for(int x = 0; x < GRID_WIDTH; x++) {
-            for(int y = 0; y < GRID_HEIGHT; y++) {
+        for (int x = 0; x < GRID_WIDTH; x++) {
+            for (int y = 0; y < GRID_HEIGHT; y++) {
                 markers[x][y].paint(g);
             }
         }
@@ -329,9 +351,9 @@ public class SelectionGrid extends Rectangle implements ImageObserver {
      * Creates all the marker objects setting their draw positions on the grid to initialise them.
      */
     private void createMarkerGrid() {
-        for(int x = 0; x < GRID_WIDTH; x++) {
+        for (int x = 0; x < GRID_WIDTH; x++) {
             for (int y = 0; y < GRID_HEIGHT; y++) {
-                markers[x][y] = new Marker(position.x+x*CELL_SIZE, position.y + y*CELL_SIZE, CELL_SIZE, CELL_SIZE);
+                markers[x][y] = new Marker(position.x + x * CELL_SIZE, position.y + y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
             }
         }
     }
@@ -343,13 +365,13 @@ public class SelectionGrid extends Rectangle implements ImageObserver {
      */
     public void populateShips() {
         ships.clear();
-        for(int i = 0; i < BOAT_SIZES.length; i++) {
+        for (int i = 0; i < BOAT_SIZES.length; i++) {
             boolean sideways = rand.nextBoolean();
-            int gridX,gridY;
+            int gridX, gridY;
             do {
-                gridX = rand.nextInt(sideways?GRID_WIDTH-BOAT_SIZES[i]:GRID_WIDTH);
-                gridY = rand.nextInt(sideways?GRID_HEIGHT:GRID_HEIGHT-BOAT_SIZES[i]);
-            } while(!canPlaceShipAt(gridX,gridY,BOAT_SIZES[i],sideways));
+                gridX = rand.nextInt(sideways ? GRID_WIDTH - BOAT_SIZES[i] : GRID_WIDTH);
+                gridY = rand.nextInt(sideways ? GRID_HEIGHT : GRID_HEIGHT - BOAT_SIZES[i]);
+            } while (!canPlaceShipAt(gridX, gridY, BOAT_SIZES[i], sideways));
             placeShip(gridX, gridY, BOAT_SIZES[i], sideways);
         }
     }
@@ -359,14 +381,14 @@ public class SelectionGrid extends Rectangle implements ImageObserver {
      * made to verify the ship can be placed there. Indicates to the marker cells that a ship is
      * on top of them to use for placement of other ships, and hit detection.
      *
-     * @param gridX X coordinate on the grid.
-     * @param gridY Y coordinate on the grid.
+     * @param gridX    X coordinate on the grid.
+     * @param gridY    Y coordinate on the grid.
      * @param segments Number of cells the ship occupies.
      * @param sideways True indicates horizontal, or false indicates vertical.
      */
     public void placeShip(int gridX, int gridY, int segments, boolean sideways) {
         placeShip(new Ship(new Position(gridX, gridY),
-                new Position(position.x+gridX*CELL_SIZE, position.y+gridY*CELL_SIZE),
+                new Position(position.x + gridX * CELL_SIZE, position.y + gridY * CELL_SIZE),
                 segments, sideways), gridX, gridY);
     }
 
@@ -375,37 +397,57 @@ public class SelectionGrid extends Rectangle implements ImageObserver {
      * made to verify the ship can be placed there. Indicates to the marker cells that a ship is
      * on top of them to use for placement of other ships, and hit detection.
      *
-     * @param ship The ship to place on the grid with already configured properties.
+     * @param ship  The ship to place on the grid with already configured properties.
      * @param gridX X coordinate on the grid.
      * @param gridY Y coordinate on the grid.
      */
     public void placeShip(Ship ship, int gridX, int gridY) {
         ships.add(ship);
-        if(ship.isSideways()) { // If the ship is horizontal
-            for(int x = 0; x < ship.getSegments(); x++) {
-                markers[gridX+x][gridY].setAsShip(ships.get(ships.size()-1));
+        if (ship.isSideways()) { // If the ship is horizontal
+            for (int x = 0; x < ship.getSegments(); x++) {
+                markers[gridX + x][gridY].setAsShip(ships.get(ships.size() - 1));
             }
         } else { // If the ship is vertical
-            for(int y = 0; y < ship.getSegments(); y++) {
-                markers[gridX][gridY+y].setAsShip(ships.get(ships.size()-1));
-            }
-        }
-    }
-    private void drawTreasures (Graphics g) {
-        for (Position treasure : treasures) {
-            if (markers[treasure.x][treasure.y].isMarked() || GamePanel.debugModeActive) {
-                int x = position.x + treasure.x * CELL_SIZE + CELL_SIZE / 2;
-                int y = position.y + treasure.y * CELL_SIZE + CELL_SIZE / 2;
-                int treasureSize = 30;
-
-                g.setColor(new Color(255, 255, 38));
-                g.fillOval(x - treasureSize / 2, y - treasureSize / 2, treasureSize, treasureSize);
+            for (int y = 0; y < ship.getSegments(); y++) {
+                markers[gridX][gridY + y].setAsShip(ships.get(ships.size() - 1));
             }
         }
     }
 
-    @Override
-    public boolean imageUpdate(Image img, int infoflags, int x, int y, int width, int height) {
-        return false;
+    private void drawTreasures(Graphics g) {
+        if (isComputerGrid) {
+            for (Position treasure : treasures) {
+                // Check if the treasure's position is marked
+                if (markers[treasure.x][treasure.y].isMarked() || GamePanel.debugModeActive || showTreasures) {
+                    BufferedImage imgToDraw = treasureStates.get(treasure) ? opentreasureImage : closedtreasureImage;
+
+                    int x = position.x + treasure.x * CELL_SIZE;
+                    int y = position.y + treasure.y * CELL_SIZE;
+
+                    int treasureWidth = 45; // Set your desired width
+                    int treasureHeight = 45; // Set your desired height
+
+                    double scaleX = (double) treasureWidth / imgToDraw.getWidth();
+                    double scaleY = (double) treasureHeight / imgToDraw.getHeight();
+
+                    AffineTransform at = AffineTransform.getTranslateInstance(x + (CELL_SIZE - treasureWidth) / 2, y + (CELL_SIZE - treasureHeight) / 2);
+                    at.scale(scaleX, scaleY);
+                    Graphics2D g2d = (Graphics2D) g;
+                    g2d.drawImage(imgToDraw, at, null);
+                }
+            }
+        }
+    }
+    public void markTreasureAsOpened(Position pos) {
+        if (treasureStates.containsKey(pos)) {
+            treasureStates.put(pos, true);
+        }
+    }
+    private void drawMine (Graphics g) {
+        for (Position mine : mines) {
+            int x = position.x + mine.x * CELL_SIZE;
+            int y = position.y + mine.y * CELL_SIZE;
+            g.drawImage(mineImage, x, y, CELL_SIZE, CELL_SIZE, null);
+        }
     }
 }

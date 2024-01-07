@@ -8,6 +8,8 @@ import java.io.File;
 import java.awt.geom.AffineTransform;
 import java.util.HashMap;
 import java.util.Map;
+import java.awt.image.LookupOp;
+import java.awt.image.ShortLookupTable;
 /**
  * Battleship
  * Author: Kudo
@@ -19,16 +21,8 @@ import java.util.Map;
  * set the colour.
  */
 public class Ship {
-    private BufferedImage shipV;
-    private BufferedImage shipH;
-    /**
-     * Used for placement colour changing.
-     * Valid: Indicates the ship could be placed at the current location shown as a Green ship.
-     * Invalid: Indicates the ship can't be placed at the current location shown as a Red ship.
-     * Placed: Used when the ship has been placed and will use default colour settings.
-     */
-    public enum ShipPlacementColour {Valid, Invalid, Placed}
-
+    private BufferedImage shipImage;
+    private BufferedImage shipImageRed;
     /**
      * The position in grid coordinates for where the ship is located.
      */
@@ -50,11 +44,6 @@ public class Ship {
      */
     private int destroyedSections;
     /**
-     * Used to change the colour during manual placement by the player to show Green or Red to show valid and invalid placement.
-     */
-    private ShipPlacementColour shipPlacementColour;
-
-    /**
      * Creates the ship with default properties ready for use. Assumes it has already been placed when created.
      *
      * @param gridPosition The position where the ship is located in terms of grid coordinates.
@@ -68,9 +57,17 @@ public class Ship {
         this.segments = segments;
         this.isSideways = isSideways;
         destroyedSections = 0;
-        shipPlacementColour = ShipPlacementColour.Placed;
+        initializeImages();
     }
-
+    private void initializeImages() {
+        String imagePath = "ship" + segments + (isSideways ? "h" : "v") + ".png";
+        try {
+            shipImage = ImageIO.read(new File(imagePath));
+            shipImageRed = applyRedColorFilter(shipImage);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
     /**
      * Draws the ship by first selecting the colour and then drawing the ship in the correct direction.
      * Colour is selected to be: Green if currently placing and it is valid, red if it is placing and invalid.
@@ -78,30 +75,44 @@ public class Ship {
      *
      * @param g Reference to the Graphics object for rendering.
      */
-    public void paint(Graphics g) {
-        if(shipPlacementColour == ShipPlacementColour.Placed) {
-            g.setColor(destroyedSections >= segments ? new Color(240, 29, 0) : Color.DARK_GRAY);
-        } else {
-            g.setColor(shipPlacementColour == ShipPlacementColour.Valid ? new Color(57, 255, 20): new Color(240, 29, 0));
-        }
+    /*public void paint(Graphics g) {
         if(isSideways) paintHorizontal(g);
         else paintVertical(g);
+    } */
+    public void paint (Graphics g) {
+        BufferedImage imgToDraw = isDestroyed() ? shipImageRed : shipImage;
+        drawImage (g, imgToDraw);
     }
+    private void drawImage(Graphics g, BufferedImage img) {
+        if (isSideways) {
+            double scaleWidth = ((double) SelectionGrid.CELL_SIZE * segments) / img.getWidth();
+            double scaleHeight = ((double) SelectionGrid.CELL_SIZE * 0.8) / img.getHeight();
+            AffineTransform at = new AffineTransform();
+            at.translate(drawPosition.x, drawPosition.y + SelectionGrid.CELL_SIZE / 2 - (img.getHeight() * scaleHeight) / 2);
+            at.scale(scaleWidth, scaleHeight);
+            Graphics2D g2d = (Graphics2D) g;
+            g2d.drawImage(img, at, null);
+        }
+        else {
+            double scaleWidth = ((double)SelectionGrid.CELL_SIZE * 0.8) / img.getWidth();
+            double scaleHeight = ((double)SelectionGrid.CELL_SIZE * segments) / img.getHeight();
+            AffineTransform at = new AffineTransform();
+            at.translate(drawPosition.x + SelectionGrid.CELL_SIZE / 2 - (img.getWidth() * scaleWidth) / 2, drawPosition.y);
+            at.scale(scaleWidth, scaleHeight);
+            Graphics2D g2d = (Graphics2D) g;
+            g2d.drawImage(img, at, null);
+        }
+        //at.translate(isSideways ? (drawPosition.x, drawPosition.y + SelectionGrid.CELL_SIZE / 2 - (img.getHeight() * scaleHeight) / 2) : drawPosition.x + SelectionGrid.CELL_SIZE / 2 - (img.getWidth() * scaleWidth) / 2, drawPosition.y);
+        //at.scale(scaleWidth, scaleHeight);
 
-    /**
-     * Sets the placement colour to indicate the state of the ship.
-     *
-     * @param shipPlacementColour Valid sets ship to show Green, Invalid sets ship to show Red, Placed sets to defaults.
-     */
-    public void setShipPlacementColour(ShipPlacementColour shipPlacementColour) {
-        this.shipPlacementColour = shipPlacementColour;
-    }
-
+        //at.translate(drawPosition.x, drawPosition.y + SelectionGrid.CELL_SIZE / 2 - (shipH.getHeight() * scaleHeight) / 2);
+    }     //at.translate(drawPosition.x + SelectionGrid.CELL_SIZE / 2 - (shipV.getWidth() * scaleWidth) / 2, drawPosition.y);
     /**
      * Toggles the current state between vertical and horizontal.
      */
     public void toggleSideways() {
         isSideways = !isSideways;
+        initializeImages();
     }
 
     /**
@@ -128,7 +139,6 @@ public class Ship {
         this.drawPosition = drawPosition;
         this.gridPosition = gridPosition;
     }
-
     /**
      * Gets the current direction of the ship.
      *
@@ -137,7 +147,6 @@ public class Ship {
     public boolean isSideways() {
         return isSideways;
     }
-
     /**
      * Gets the number of segments that make up the ship.
      *
@@ -146,13 +155,12 @@ public class Ship {
     public int getSegments() {
         return segments;
     }
-
     /**
      * Gets a list of all cells that this ship occupies to be used for validation in AI checks.
      *
      * @return A list of all cells that this ship occupies.
      */
-    public List<Position> getOccupiedCoordinates() {
+    public List <Position> getOccupiedCoordinates() {
         List<Position> result = new ArrayList<>();
         if(isSideways) { // handle the case when horizontal
             for(int x = 0; x < segments; x++) {
@@ -165,116 +173,26 @@ public class Ship {
         }
         return result;
     }
+    public static BufferedImage applyRedColorFilter(BufferedImage original) {
+        // Check if the original image has an alpha channel
+        boolean hasAlphaChannel = original.getColorModel().hasAlpha();
 
-    /**
-     * Draws the vertical ship by first drawing a triangle for the first cell, and then a
-     * rectangle to cover the remaining cells based on the number of segments.
-     *
-     * @param g Reference to the Graphics object for rendering.
-     */
-   /* public void paintVertical(Graphics g) {
-        int boatWidth = (int)(SelectionGrid.CELL_SIZE * 0.8);
-        int boatLeftX = drawPosition.x + SelectionGrid.CELL_SIZE / 2 - boatWidth / 2;
-        g.fillPolygon(new int[]{drawPosition.x+SelectionGrid.CELL_SIZE/2,boatLeftX,boatLeftX+boatWidth},
-                new int[]{drawPosition.y+SelectionGrid.CELL_SIZE/4,drawPosition.y+SelectionGrid.CELL_SIZE,drawPosition.y+SelectionGrid.CELL_SIZE},3);
-        g.fillRect(boatLeftX,drawPosition.y+SelectionGrid.CELL_SIZE, boatWidth,
-                (int)(SelectionGrid.CELL_SIZE * (segments-1.2)));
-    } */
-    public void paintVertical(Graphics g) {
-        if (segments == 2) {
-            try {
-                shipV = ImageIO.read(new File("ship2v.png")); // Replace with the actual path
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+        // Create lookup tables for red, green, and blue components
+        short[] red = new short[256];
+        short[] zero = new short[256];
+        for (int i = 0; i < 256; i++) {
+            red[i] = (short) i; // retain red component
+            zero[i] = 0;        // zero out green and blue components
         }
-        if (segments == 3) {
-            try {
-                shipV = ImageIO.read(new File("ship3v.png")); // Replace with the actual path
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        if (segments == 4) {
-            try {
-                shipV = ImageIO.read(new File("ship4v.png")); // Replace with the actual path
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        if (segments == 5) {
-            try {
-                shipV = ImageIO.read(new File("ship5v.png")); // Replace with the actual path
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        Graphics2D g2d = (Graphics2D) g;
 
-        // Calculate the scaling factor to fit the ship size
-        double scaleWidth = ((double)SelectionGrid.CELL_SIZE * 0.8) / shipV.getWidth();
-        double scaleHeight = ((double)SelectionGrid.CELL_SIZE * segments) / shipV.getHeight();
+        short[][] data = hasAlphaChannel ? new short[][]{red, zero, zero, red} : new short[][]{red, zero, zero}; // Include alpha if original has alpha
 
-        // Apply scaling and draw the image
-        AffineTransform at = new AffineTransform();
-        at.translate(drawPosition.x + SelectionGrid.CELL_SIZE / 2 - (shipV.getWidth() * scaleWidth) / 2, drawPosition.y);
-        at.scale(scaleWidth, scaleHeight);
-        g2d.drawImage(shipV, at, null);
+        ShortLookupTable lookupTable = new ShortLookupTable(0, data);
+
+        // Applying the lookup operation
+        BufferedImage processed = new BufferedImage(original.getWidth(), original.getHeight(), original.getType());
+        LookupOp op = new LookupOp(lookupTable, null);
+        return op.filter(original, processed);
     }
 
-    /**
-     * Draws the horizontal ship by first drawing a triangle for the first cell, and then a
-     * rectangle to cover the remaining cells based on the number of segments.
-     *
-     * @param g Reference to the Graphics object for rendering.
-     */
-   /* public void paintHorizontal(Graphics g) {
-        int boatWidth = (int)(SelectionGrid.CELL_SIZE * 0.8);
-        int boatTopY = drawPosition.y + SelectionGrid.CELL_SIZE / 2 - boatWidth / 2;
-        g.fillPolygon(new int[]{drawPosition.x+SelectionGrid.CELL_SIZE/4,drawPosition.x+SelectionGrid.CELL_SIZE,drawPosition.x+SelectionGrid.CELL_SIZE},
-                      new int[]{drawPosition.y+SelectionGrid.CELL_SIZE/2,boatTopY,boatTopY+boatWidth},3);
-        g.fillRect(drawPosition.x+SelectionGrid.CELL_SIZE,boatTopY,
-                (int)(SelectionGrid.CELL_SIZE * (segments-1.2)), boatWidth);
-    }*/
-    public void paintHorizontal(Graphics g) {
-        if (segments == 2) {
-            try {
-                shipH = ImageIO.read(new File("ship2h.png")); // Replace with the actual path
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        if (segments == 3) {
-            try {
-                shipH = ImageIO.read(new File("ship3h.png")); // Replace with the actual path
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        if (segments == 4) {
-            try {
-                shipH = ImageIO.read(new File("ship4h.png")); // Replace with the actual path
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        if (segments == 5) {
-            try {
-                shipH = ImageIO.read(new File("ship5h.png")); // Replace with the actual path
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        Graphics2D g2d = (Graphics2D) g;
-
-        // Calculate the scaling factor to fit the ship size
-        double scaleWidth = ((double)SelectionGrid.CELL_SIZE * segments) / shipH.getWidth();
-        double scaleHeight = ((double)SelectionGrid.CELL_SIZE * 0.8) / shipH.getHeight();
-
-        // Apply scaling and draw the image
-        AffineTransform at = new AffineTransform();
-        at.translate(drawPosition.x, drawPosition.y + SelectionGrid.CELL_SIZE / 2 - (shipH.getHeight() * scaleHeight) / 2);
-        at.scale(scaleWidth, scaleHeight);
-        g2d.drawImage(shipH, at, null);
-    }
 }

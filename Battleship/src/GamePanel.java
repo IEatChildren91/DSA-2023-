@@ -90,41 +90,6 @@ public class GamePanel extends JPanel implements MouseListener, MouseMotionListe
      * then used to determine how much space is required. The listeners are attached, AI configured, and
      * everything set to begin the game with placing a ship for the player.
      */
-    /*private void drawSonarScreen(Graphics g, int gridX, int gridY, int gridWidth, int gridHeight) {
-        Graphics2D g2d = (Graphics2D) g; // Cast to Graphics2D for more control
-
-        int centerX = gridX + gridWidth / 2;
-        int centerY = gridY + gridHeight / 2;
-        int radius = 50*4 ;
-
-        // Set the transparency
-        float alpha = 0.75f; // Adjust this value for desired transparency (0.0 to 1.0)
-        AlphaComposite ac = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha);
-
-        g2d.setComposite(ac);
-        float thickness = 0.55f; // Adjust this value for desired thickness
-        g2d.setStroke(new BasicStroke(thickness));
-
-        // Draw the sonar circles
-        g2d.setColor(new Color(0, 255, 0)); // Green color for sonar
-        int numCircles = 8; // Increased to 7 circles
-        for (int i = 1; i <= numCircles; i++) {
-            int circleRadius = i * radius / numCircles; // Adjusted for smaller gaps
-            g2d.drawOval(centerX - circleRadius + 25, centerY - circleRadius+25, 2 * circleRadius, 2 * circleRadius);
-        }
-
-
-        // Draw the sonar lines
-        for (int i = 45; i < 360; i += 90) {
-            double rad = Math.toRadians(i);
-            int lineX = centerX + (int) (radius * Math.cos(rad));
-            int lineY = centerY + (int) (radius * Math.sin(rad));
-            g2d.drawLine(centerX, centerY, lineX, lineY);
-        }
-
-        // Reset to default composite
-        g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1.0f));
-    }*/
     private void drawRadarBackground(Graphics g, int gridX, int gridY, int gridWidth, int gridHeight) {
         if (radarBG != null) {
             int imageWidth = 50*10 + 200;
@@ -160,8 +125,8 @@ public class GamePanel extends JPanel implements MouseListener, MouseMotionListe
 
         int aiChoice = mapDifficultyToAIChoice(difficulty);
         int gap = 60; // Gap between the two grids
-        computer = new SelectionGrid(0, 0);
-        player = new SelectionGrid(computer.getWidth() + gap, 0);
+        computer = new SelectionGrid(0, 0, true);
+        player = new SelectionGrid(computer.getWidth() + gap, 0, false);
         setLayout(new BorderLayout());
         setBackground(Color.BLACK);
         int totalWidth = computer.getWidth() + player.getWidth() + gap;
@@ -277,7 +242,6 @@ public class GamePanel extends JPanel implements MouseListener, MouseMotionListe
      * @param targetPosition The position on the grid to insert the ship at.
      */
     private void placeShip(Position targetPosition) {
-        placingShip.setShipPlacementColour(Ship.ShipPlacementColour.Placed);
         player.placeShip(placingShip,tempPlacingPosition.x,tempPlacingPosition.y);
         placingShipIndex++;
         // If there are still ships to place
@@ -332,7 +296,7 @@ public class GamePanel extends JPanel implements MouseListener, MouseMotionListe
      * @param targetPosition The grid position clicked on by the player.
      */
     private void doPlayerTurn(Position targetPosition) {
-        boolean hit = computer.markPosition(targetPosition);
+        boolean hit = computer.markPosition(targetPosition, true);
         boolean hitTreasure = computer.isTreasureAtPosition(targetPosition);
         String statusMessage = "";
         if (hit) {
@@ -340,6 +304,7 @@ public class GamePanel extends JPanel implements MouseListener, MouseMotionListe
             statusPanel.setPlayerHitCount(playerCount);
         }
         if(hitTreasure) {
+            computer.markTreasureAsOpened(targetPosition);
             statusMessage = "TREASURE FOUND! YOU HAVE 1 MORE MOVE!!";
             extraTurn();
             //doPlayerTurn(targetPosition);
@@ -369,7 +334,7 @@ public class GamePanel extends JPanel implements MouseListener, MouseMotionListe
      */
     private void doAITurn() {
         Position aiMove = aiController.selectMove();
-        boolean hit = player.markPosition(aiMove);
+        boolean hit = player.markPosition(aiMove, false);
         boolean hitTreasure = player.isTreasureAtPosition(aiMove);
         String hitMiss = hit ? "HIT!" : "MISSED!";
         String destroyed = "";
@@ -431,9 +396,6 @@ public class GamePanel extends JPanel implements MouseListener, MouseMotionListe
         // Change the colour of the ship based on whether it could be placed at the current location.
         if(player.canPlaceShipAt(tempPlacingPosition.x, tempPlacingPosition.y,
                 SelectionGrid.BOAT_SIZES[placingShipIndex],placingShip.isSideways())) {
-            placingShip.setShipPlacementColour(Ship.ShipPlacementColour.Valid);
-        } else {
-            placingShip.setShipPlacementColour(Ship.ShipPlacementColour.Invalid);
         }
     }
 
