@@ -20,7 +20,6 @@ public class Game implements KeyListener {
         Game game = new Game();
     }
 
-
     /**
      * Reference to the GamePanel object to pass key events to.
      */
@@ -33,8 +32,6 @@ public class Game implements KeyListener {
     public enum GameDifficulty {
         EASY, MEDIUM, HARD
     }
-
-
     /**
      * Creates the JFrame with a GamePanel inside it, attaches a key listener,
      * and makes everything visible.
@@ -111,8 +108,8 @@ public class Game implements KeyListener {
         button.setOpaque(false); 
         button.setContentAreaFilled(false); 
         button.setBorderPainted(false); 
-        button.setForeground(Color.WHITE); 
-        button.setFont(new Font("Game Font", Font.BOLD, 16)); // Font 
+        button.setForeground(Color.WHITE);
+        button.setFont(new Font("Game Font", Font.BOLD, 16)); // Font
         button.setFocusPainted(false);
         button.setBorder(new RoundedBorder(10,1)); // Round border
 
@@ -186,16 +183,16 @@ public class Game implements KeyListener {
                 public void mouseEntered(java.awt.event.MouseEvent evt) {
                     setBackground(hoverBackgroundColor);
                     setBorderThickness(5); 
-                    setFont(new Font("Game Font", Font.BOLD, 18)); 
+                    setFont(new Font("Game Font", Font.BOLD, 18));
 
                 }
 
                 public void mouseExited(java.awt.event.MouseEvent evt) {
                     setBackground(normalBackgroundColor);
                     setBorderThickness(1); 
-                    setFont(new Font("Game Font", Font.BOLD, 16)); 
+                    setFont(new Font("Game Font", Font.BOLD, 16));
 
-                    
+
                 }
             });
         }
