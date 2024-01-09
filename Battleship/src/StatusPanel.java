@@ -18,9 +18,6 @@ public class StatusPanel extends Rectangle{
     /**
      * The font to use for drawing both of the messages.
      */
-    private final Font font = new Font("Monospaced", Font.BOLD, 30);
-    private final Font font2 = new Font ("Monospaced", Font.ITALIC + Font.BOLD + Font.CENTER_BASELINE, 30);
-    private final Font font3 = new Font ("Monospaced", Font.ITALIC, 30);
     private Font audiowide;
 
     /**
@@ -87,6 +84,10 @@ public class StatusPanel extends Rectangle{
      * @param playerWon True if the player has won, or false if the player lost.
      */
     public void showGameOver(boolean playerWon) {
+        if (playerWon) {
+            setCompHitCount(0);
+            setPlayerHitCount(0);
+        }
         topLine = (playerWon) ? gameOverWinLine : gameOverLossLine;
         bottomLine = gameOverBottomLine;
     }
@@ -122,7 +123,7 @@ public class StatusPanel extends Rectangle{
             ge.registerFont(audiowide);
         } catch (IOException | FontFormatException e) {
             e.printStackTrace();
-            audiowide = new Font("Serif", Font.BOLD, 25); // Fallback font in case of error
+            audiowide = new Font("Serif", Font.BOLD, 25);
         }
         g.setColor(Color.BLACK);
         g.fillRect(position.x, position.y, width, height);
@@ -132,9 +133,8 @@ public class StatusPanel extends Rectangle{
         g.drawString(topLine, position.x+width/2-strWidth/2, position.y+70);
         strWidth = g.getFontMetrics().stringWidth(bottomLine);
         g.drawString(bottomLine, position.x+width/2-strWidth/2, position.y+70+30+10);
-        //g.setFont(font2);
         g.setColor(Color.RED);
-        g.drawString(playerHitCount, position.x + 750, position.y + height - 20);
+        g.drawString(playerHitCount, position.x + 800, position.y + height - 20);
         g.drawString(compHitCount, position.x + 115, position.y + height - 20);
     }
 }

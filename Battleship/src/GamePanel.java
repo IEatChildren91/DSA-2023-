@@ -287,6 +287,8 @@ public class GamePanel extends JPanel implements MouseListener, MouseMotionListe
      * Resets all the class's properties back to their defaults ready for a new game to begin.
      */
     public void restart() {
+        compCount=0;
+        playerCount =0;
         computer.reset();
         player.reset();
         // Player can see their own ships by default
@@ -413,7 +415,7 @@ public class GamePanel extends JPanel implements MouseListener, MouseMotionListe
         statusPanel.setTopLine(statusMessage + " YOU " + hitMiss + " " + destroyed);
 
         if(computer.areAllShipsDestroyed()) {
-            playSound("win.wav");
+            //playSound("win.wav");
             gameState = GameState.GameOver;
             statusPanel.showGameOver(true);
             playVideo("toothless.mp4");
@@ -448,7 +450,7 @@ public class GamePanel extends JPanel implements MouseListener, MouseMotionListe
         statusPanel.setBottomLine(/*statusMessage */"ENEMY " + hitMiss + " " + destroyed);
         if(player.areAllShipsDestroyed()) {
             // Computer wins!
-            playSound("lose.wav");
+            //playSound("lose.wav");
             playVideo("meme12.mp4");
             gameState = GameState.GameOver;
             statusPanel.showGameOver(false);
