@@ -20,6 +20,24 @@ import java.util.Timer;
 import javax.imageio.ImageIO;
 import javax.sound.sampled.*;
 
+
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
+import java.awt.event.MouseMotionListener;
+import java.io.File;
+import javafx.application.Platform;
+import javafx.embed.swing.JFXPanel;
+import javafx.scene.Group;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
+import javafx.scene.layout.StackPane;
+import javafx.scene.media.Media;
+import javafx.scene.media.MediaPlayer;
+import javafx.scene.media.MediaView;
+
 /**
  * Battleship
  * Author: Kudo
@@ -147,6 +165,41 @@ public class GamePanel extends JPanel implements MouseListener, MouseMotionListe
             e.printStackTrace();
         }
     }
+
+    //playvideo method
+     private void playVideo(String videoFileName) {
+        JFXPanel jfxPanel = new JFXPanel(); 
+        JFrame videoFrame = new JFrame(); 
+    
+        Platform.runLater(() -> {
+            try {
+                File videoFile = new File(videoFileName);
+                MediaPlayer mediaPlayer = new MediaPlayer(new Media(videoFile.toURI().toString()));
+                mediaPlayer.setAutoPlay(true);
+    
+                MediaView mediaView = new MediaView(mediaPlayer);
+                StackPane root = new StackPane(mediaView); 
+                Scene scene = new Scene(root); 
+                jfxPanel.setScene(scene); 
+    
+                mediaPlayer.setOnEndOfMedia(() -> {
+                    
+                    javax.swing.SwingUtilities.invokeLater(videoFrame::dispose);
+                });
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
+    
+        javax.swing.SwingUtilities.invokeLater(() -> {
+            videoFrame.add(jfxPanel);
+            videoFrame.setSize(550, 450);
+            videoFrame.setLocationRelativeTo(null);
+            videoFrame.setVisible(true); 
+            videoFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE); 
+        });
+    }
+
 
 
     public GamePanel(Game.GameDifficulty difficulty) {
@@ -363,6 +416,7 @@ public class GamePanel extends JPanel implements MouseListener, MouseMotionListe
             playSound("win.wav");
             gameState = GameState.GameOver;
             statusPanel.showGameOver(true);
+            playVideo("toothless.mp4");
         }
     }
 
@@ -395,6 +449,7 @@ public class GamePanel extends JPanel implements MouseListener, MouseMotionListe
         if(player.areAllShipsDestroyed()) {
             // Computer wins!
             playSound("lose.wav");
+            playVideo("meme12.mp4");
             gameState = GameState.GameOver;
             statusPanel.showGameOver(false);
         } else if (aiHasExtraTurn && !player.areAllShipsDestroyed()) {
