@@ -1,12 +1,9 @@
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
 /**
- * Battleship
- * Author: Kudo
- *
- * SmarterAI class:
+ * DSA Project - Battleship Game - Panadol Extra.*
+ * Class: SmarterAI.
  * Defines an AI that will search randomly until it finds ships.
  * Then attempts to attack cells around the discovered location
  * to ruthlessly go after ships.
@@ -31,11 +28,9 @@ public class SmarterAI extends BattleshipAI {
      * When false it will just use the next random selection.
      */
     private boolean maximiseAdjacentRandomisation;
-
     /**
      * Creates the basic setup for the AI by setting up references to the player's grid,
      * and creates a list of all valid moves.
-     *
      * @param playerGrid A reference to the grid controlled by the player for testing attacks.
      * @param preferMovesFormingLine True will enable the smartest version of the AI to try and form lines when attacking ships.
      * @param maximiseAdjacentRandomisation True makes the randomised attacks prefer grid positions that have more not attacked points around them.
@@ -47,7 +42,6 @@ public class SmarterAI extends BattleshipAI {
         this.maximiseAdjacentRandomisation = maximiseAdjacentRandomisation;
         Collections.shuffle(validMoves);
     }
-
     /**
      * Resets the ships that have been hit and randomises the move order.
      */
@@ -57,12 +51,10 @@ public class SmarterAI extends BattleshipAI {
         shipHits.clear();
         Collections.shuffle(validMoves);
     }
-
     /**
      * Selects an appropriate move depending on whether any ships were currently hit and not yet destroyed.
      * The AI will choose an attack adjacent to known ship hit locations if a ship has been foumd, otherwise
      * it will select the next random move.
-     *
      * @return The selected position to attack.
      */
     @Override
@@ -92,10 +84,8 @@ public class SmarterAI extends BattleshipAI {
         }
         return selectedMove;
     }
-
     /**
      * Gets a list of moves adjacent to shipHits and chooses one at random.
-     *
      * @return A random move that has a good chance of hitting a ship again.
      */
     private Position getSmartAttack() {
@@ -103,13 +93,10 @@ public class SmarterAI extends BattleshipAI {
         Collections.shuffle(suggestedMoves);
         return  suggestedMoves.get(0);
     }
-
-
     /**
      * Gets a list of moves adjacent to shipHits and chooses one based on
      * whether it forms a line of at least two elements with adjacent ship hits.
      * If no optimal guess is found a random adjacent move is selected.
-     *
      * @return A valid move that is adjacent to shipHits preferring one that forms a line.
      */
     private Position getSmarterAttack() {
@@ -124,10 +111,8 @@ public class SmarterAI extends BattleshipAI {
         Collections.shuffle(suggestedMoves);
         return  suggestedMoves.get(0);
     }
-
     /**
      * Searches for the valid move with the most adjacent cells that have not been attacked.
-     *
      * @return The first position with the highest score in the valid moves list.
      */
     private Position findMostOpenPosition() {
@@ -144,10 +129,8 @@ public class SmarterAI extends BattleshipAI {
         }
         return position;
     }
-
     /**
      * Counts the number of adjacent cells that have not been marked around the specified position.
-     *
      * @param position The position to count adjacent cells.
      * @return The number of adjacent cells that have not been marked around the position.
      */
@@ -161,10 +144,8 @@ public class SmarterAI extends BattleshipAI {
         }
         return notAttackedCount;
     }
-
     /**
      * Tests if there are two adjacent ship hits in a direction from a test start point.
-     *
      * @param start Position to start from (but not test).
      * @param direction Direction to move from the start position.
      * @return True if there are two adjacent ship hits in the specified direction.
@@ -178,11 +159,9 @@ public class SmarterAI extends BattleshipAI {
         if(debugAI) System.out.println("Smarter match found AT: " + start + " TO: " + testPosition);
         return true;
     }
-
     /**
      * Gets the adjacent cells around every shipHit and creates a unique list of the
      * elements that are also still in the valid move list.
-     *
      * @return A list of all valid moves that are adjacent cells to the current ship hits.
      */
     private List<Position> getAdjacentSmartMoves() {
@@ -201,10 +180,8 @@ public class SmarterAI extends BattleshipAI {
         }
         return result;
     }
-
     /**
      * Debug method to print a list of Positions.
-     *
      * @param messagePrefix Debug message to show before the data.
      * @param data A list of elements to show in the form [,,,]
      */
@@ -219,11 +196,9 @@ public class SmarterAI extends BattleshipAI {
         result += "]";
         System.out.println(messagePrefix + " " + result);
     }
-
     /**
      * Creates a list of all adjacent cells around the position excluding any that
      * are off the grid.
-     *
      * @param position Position to find adjacent cells around.
      * @return A list of all adjacent positions that are inside the grid space.
      */
@@ -251,12 +226,10 @@ public class SmarterAI extends BattleshipAI {
         }
         return result;
     }
-
     /**
      * Tests if the position hits a ship. Then evaluates if the ship that is hit
      * would be destroyed. If it would be destroyed the data is all cleared for that
      * ship because it is no longer necessary to know about destroyed ships.
-     *
      * @param testPosition The position that is being evaluated for hitting a ship.
      */
     private void updateShipHits(Position testPosition) {
@@ -284,9 +257,8 @@ public class SmarterAI extends BattleshipAI {
 
     /**
      * Tests if all the positions in positionsToSearch are in listToSearchIn.
-     *
-     * @param positionsToSearch List of positions to search all of.
-     * @param listToSearchIn List of positions to search inside of.
+     * @param positionsToSearch List of positions to search all.
+     * @param listToSearchIn List of positions to search inside.
      * @return True if all the positions in positionsToSearch are in listToSearchIn.
      */
     private boolean containsAllPositions(List<Position> positionsToSearch, List<Position> listToSearchIn) {

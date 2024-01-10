@@ -1,32 +1,30 @@
-import javax.sound.sampled.AudioInputStream;
-import javax.sound.sampled.AudioSystem;
-import javax.sound.sampled.Clip;
 import javax.swing.*;
-
 import java.awt.*;
-import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
-import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
-
+/**
+ * DSA Project - Battleship Game - Panadol Extra.
+ * Class: Game.
+ * The Game class initializes the main frame and controls
+ * the navigation between different panels representing
+ * game states like difficulty selection and strategy display.
+ */
 public class Game implements KeyListener {
     /**
      * Entry point for the application to create an instance of the Game class.
-     *
      * @param args Not used.
      */
     public static void main(String[] args) {
         Game game = new Game();
     }
-
     /**
      * Reference to the GamePanel object to pass key events to.
      */
     private GamePanel gamePanel;
+    /**
+     * A frame to store the panels.
+     */
     private JFrame frame;
-
     /**
      * Enum for representing game difficulty levels.
      */
@@ -61,42 +59,29 @@ public class Game implements KeyListener {
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
     }
+    /**
+     * Starts the game by creating a new GamePanel based on the chosen difficulty level,
+     * updating the frame content, setting up key inputs, and focusing on the game panel
+     * to begin gameplay.
+     * @param difficulty The chosen difficulty level for the game.
+     */
     private void startGame(GameDifficulty difficulty) {
         // Creating a new game panel with the chosen difficulty
         gamePanel = new GamePanel(difficulty);
         frame.getContentPane().removeAll();
         frame.getContentPane().add(gamePanel);
 
+        // Accommodating the new panel
         frame.pack();
         frame.revalidate();
         frame.repaint();
         frame.setLocationRelativeTo(null);
 
-
-        // Key input
+        // Key input handling
         gamePanel.setFocusable(true);
         gamePanel.requestFocusInWindow();
         gamePanel.addKeyListener(this);
-
-
     }
-    /**
-     * Method to create a custom JButton with specific text and action.
-     * @param text The text to be displayed on the button.
-     * @param action The action to be performed when the button is clicked.
-     * @return A customized JButton.
-     */
-
-    /**
-     * Method to customize the appearance of a JButton.
-     * @param button The JButton to be customized.
-     */
-
-
-    /**
-     * Custom border class with rounded corners. Implements the Border interface.
-     */
-
     /**
      * Displays the strategy panel. This method sets up a new panel showing strategic information.
      */
@@ -110,6 +95,7 @@ public class Game implements KeyListener {
         JPanel buttonStart = new JPanel(new GridLayout(3, 1, 5, 20)); //
         buttonStart.setOpaque(false); //
 
+        // Print the strategy using animation method
         strategyPanel.drawTextOnPanel("Each player deploys his ships (of lengths varying from 2 to 5" +
                 " squares) secretly on a square grid. Then each player shoots at " +
                 "the other's grid by calling a location. The defender responds by" +
@@ -141,7 +127,6 @@ public class Game implements KeyListener {
             gamePanel.requestFocusInWindow();
         }
     }
-
     /**
      * Displays the difficulty selection panel. This method sets up a new panel for choosing game difficulty.
      */
@@ -195,17 +180,9 @@ public class Game implements KeyListener {
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
     }
-
-    /**
-     * Starts the game with the selected difficulty.
-     * @param difficulty The difficulty level selected for the game.
-     */
-
-
     /**
      * Called when the key is pressed down. Passes the key press on to the
      * GamePanel.
-     *
      * @param e Information about what key was pressed.
      */
     @Override
@@ -213,21 +190,15 @@ public class Game implements KeyListener {
         System.out.println("Key Pressed: " + KeyEvent.getKeyText(e.getKeyCode())); // For debugging
         gamePanel.handleInput(e.getKeyCode());
     }
-
-
-
     /**
      * Not used.
-     *
      * @param e Not used.
      */
     @Override
     public void keyTyped(KeyEvent e) {
     }
-
     /**
      * Not used.
-     *
      * @param e Not used.
      */
     @Override

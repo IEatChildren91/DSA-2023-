@@ -4,22 +4,25 @@ import java.awt.GraphicsEnvironment;
 import java.io.File;
 import java.io.IOException;
 /**
- * Battleship
- * Author: Kudo
- *
- * StatusPanel class:
+ * DSA Project - Battleship Game - Panadol Extra.
+ * Class: StatusPanel.
  * Defines a simple text panel to show a top and bottom line of text.
  * Some of these are already defined in the class, and it provides
  * additional methods to set the messages to custom values.
  */
 public class StatusPanel extends Rectangle{
+    /**
+     * String to count the score of player.
+     */
     private String playerHitCount = "PLAYER HITS: 0";
+    /**
+     * String to count the score of computer.
+     */
     private String compHitCount = "COMPUTER HITS: 0";
     /**
      * The font to use for drawing both of the messages.
      */
     private Font audiowide;
-
     /**
      * Message to show on the top line during ship placement.
      */
@@ -40,7 +43,6 @@ public class StatusPanel extends Rectangle{
      * Message to show on the bottom line when the game is won or lost.
      */
     private final String gameOverBottomLine = "PRESS S TO RESTART AGAIN.";
-
     /**
      * The current message to display on the top line.
      */
@@ -49,11 +51,9 @@ public class StatusPanel extends Rectangle{
      * The current message to display on the bottom line.
      */
     private String bottomLine;
-
     /**
      * Configures the status panel to be ready for drawing a background,
      * and initial default text.
-     *
      * @param position Top left corner of the panel.
      * @param width Width of the area to draw within.
      * @param height Height of the area to draw within.
@@ -62,14 +62,20 @@ public class StatusPanel extends Rectangle{
         super(position, width, height);
         reset();
     }
+    /**
+     * Sets the player's hit count by updating the hit count with the provided value.
+     * @param hits The number of hits to set for the player.
+     */
     public void setPlayerHitCount(int hits) {
         playerHitCount = "PLAYER HITS: " + hits; // Update the hit count
     }
-
+    /**
+     * Sets the computer's hit count by updating the hit count with the provided value.
+     * @param hits The number of hits to set for the player.
+     */
     public void setCompHitCount(int hits) {
         compHitCount = "COMPUTER HITS: " + hits; // Update the hit count
     }
-
     /**
      * Resets the message back to the default for ship placement.
      */
@@ -77,10 +83,8 @@ public class StatusPanel extends Rectangle{
         topLine = placingShipLine1;
         bottomLine = placingShipLine2;
     }
-
     /**
      * Sets the message to display based on whether the player has won or lost.
-     *
      * @param playerWon True if the player has won, or false if the player lost.
      */
     public void showGameOver(boolean playerWon) {
@@ -91,29 +95,24 @@ public class StatusPanel extends Rectangle{
         topLine = (playerWon) ? gameOverWinLine : gameOverLossLine;
         bottomLine = gameOverBottomLine;
     }
-
     /**
      * Sets the message to display on the top line of output to any specified String.
-     *
      * @param message Message to display on the top line.
      */
     public void setTopLine(String message) {
         topLine = message;
     }
-
     /**
      * Sets the message to display on the bottom line of output to any specified String.
-     *
      * @param message Message to display on the bottom line.
      */
     public void setBottomLine(String message) {
         bottomLine = message;
     }
-
     /**
-     * Draws a light gray background with black text centred over two lines using
+     * Draws a black background with black text centred over two lines using
      * the top line and bottom line messages.
-     *
+     * Draws the score of player and computer right under each grid.
      * @param g Reference to the Graphics object for rendering.
      */
     public void paint(Graphics g) {
