@@ -209,6 +209,8 @@ public class GamePanel extends JPanel implements MouseListener, MouseMotionListe
      */
     public void restart() {
         // Reset the score and the process
+        statusPanel.setCompHitCount(0);
+        statusPanel.setPlayerHitCount(0);
         compCount=0;
         playerCount =0;
         computer.reset();
