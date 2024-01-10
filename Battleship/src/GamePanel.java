@@ -141,8 +141,10 @@ public class GamePanel extends JPanel implements MouseListener, MouseMotionListe
         // Choose the AI to play with player
         if (aiChoice == 0) {
             aiController = new SimpleRandomAI(player);
+        } else if (aiChoice == 1) {
+            aiController = new SmarterAI(player, false, true);
         } else {
-            aiController = new SmarterAI(player, aiChoice == 2, aiChoice == 2);
+            aiController = new SmarterAI(player, true, true);
         }
 
         // Draw the status panel at the bottom of the grid

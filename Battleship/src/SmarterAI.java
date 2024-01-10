@@ -52,38 +52,47 @@ public class SmarterAI extends BattleshipAI {
         Collections.shuffle(validMoves);
     }
     /**
-     * Selects an appropriate move depending on whether any ships were currently hit and not yet destroyed.
-     * The AI will choose an attack adjacent to known ship hit locations if a ship has been foumd, otherwise
+     * An algorithm to selects an appropriate move depending on whether any ships were currently hit and not yet destroyed.
+     * The AI will choose an attack adjacent to known ship hit locations if a ship has been found, otherwise
      * it will select the next random move.
      * @return The selected position to attack.
      */
     @Override
     public Position selectMove() {
-        if(debugAI) System.out.println("\nBEGIN TURN===========");
+        if (debugAI) {
+            System.out.println("\nBEGIN TURN===========");
+        }
+
         Position selectedMove;
-        // If a ship has been hit, but not destroyed
-        if(shipHits.size() > 0) {
-            if(preferMovesFormingLine) {
+
+        if (shipHits.size() > 0) {
+            // If ship hit, but not destroyed
+            if (preferMovesFormingLine) {
                 selectedMove = getSmarterAttack();
             } else {
                 selectedMove = getSmartAttack();
             }
         } else {
-            if(maximiseAdjacentRandomisation) {
+            // If no ship hit
+            if (maximiseAdjacentRandomisation) {
                 selectedMove = findMostOpenPosition();
             } else {
                 // Use a random move
                 selectedMove = validMoves.get(0);
             }
         }
+
         updateShipHits(selectedMove);
         validMoves.remove(selectedMove);
-        if(debugAI) {
+
+        if (debugAI) {
             System.out.println("Selected Move: " + selectedMove);
             System.out.println("END TURN===========");
         }
+
         return selectedMove;
     }
+
     /**
      * Gets a list of moves adjacent to shipHits and chooses one at random.
      * @return A random move that has a good chance of hitting a ship again.
