@@ -2,6 +2,7 @@
 - [Anh Thu](https://github.com/panadolextra91)
 - [Dang Khoi](https://github.com/dangkhoi3107)
 - [Nguyen Phat](https://github.com/ititiu21354)
+
 This is a clone of a video game, BattleShip
 
 Made as a part of project in Algorithms & Data Structures course at IU-HCMC.
